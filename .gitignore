@@ -1,0 +1,68 @@
+# Python bytecode files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Log files
+*.log
+mating_system_debug.log
+
+# Results and output directories
+results/
+output/
+
+# Python virtual environments
+venv/
+env/
+*.env
+.env.local
+.env.*.local
+
+# IDE related files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS related files
+.DS_Store
+Thumbs.db
+
+# Configuration files (if they contain sensitive info)
+# config/secrets.yaml
+
+# Testing files
+coverage.xml
+.pytest_cache/
+
+# Documentation files
+build/
+dist/
+*.egg-info/
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Image and data files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.svg
+*.csv
+*.xlsx
+*.xls
+*.pdf
+
+# Compressed files
+*.zip
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.rar
