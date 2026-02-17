@@ -10,8 +10,7 @@ This model abstracts all reproductive behaviors as allocations of a finite energ
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd BreedShare/CurrentVersion
+git clone https://github.com/lucas-shuo-han/BreedShare.git
 
 # Install dependencies
 pip install numpy

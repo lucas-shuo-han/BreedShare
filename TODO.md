@@ -1,71 +1,173 @@
-# 项目未实现问题清单
+# Project Issues and Task List
 
-## 1. 家域功能问题
+## Priority Levels
+- **CRITICAL**: Issues that block core functionality or prevent reliable operation
+- **HIGH**: Important issues that significantly impact simulation validity or usability
+- **MEDIUM**: Issues that should be addressed for completeness but don't block core functionality
+- **LOW**: Nice-to-have improvements or optimizations
 
-### 1.1 Homerange（家域）功能未使用
-- **文件**: `agents/female_agent.py`, `agents/nest.py`
-- **问题**: home_range完全没有被核心模拟逻辑使用，仅在初始化阶段创建并在报告生成时作为统计数据使用
-- **影响**: 代码冗余，可能导致混淆
-- **修复方案**: 移除未使用的home_range相关代码，或集成到核心模拟逻辑中
+---
 
-## 2. 角色类型问题
+## CRITICAL Priority
 
-### 2.1 Male角色类型单一
-- **文件**: `simulation/game_loop.py`
-- **问题**: 所有Male角色都默认成为alpha，没有区分alpha和beta角色
-- **影响**: 限制了对保卫领地等行为的模拟
-- **修复方案**: 实现alpha和beta角色的区分，添加角色之间的互动机制
+### 1. Absence of Comprehensive Test Coverage
+- **Status**: No existing tests implemented
+- **Impact**: CRITICAL - Without tests, we cannot:
+  - Verify that the simulation logic works correctly
+  - Detect regressions when making changes
+  - Refactor code safely
+  - Validate that bug fixes actually work
+  - Ensure cross-platform compatibility
+- **Affected Components**: Entire codebase
+  - `agents/` - Agent behavior logic
+  - `strategies/` - Decision-making algorithms including belief system
+  - `simulation/` - Core simulation loop and game mechanics
+  - `config/` - Configuration validation
+  - `utils/` - Utility functions
+- **Required Test Coverage**:
+  - **Unit Tests**: Test individual classes and functions in isolation
+  - **Integration Tests**: Test interactions between components (e.g., agent-nest interactions)
+  - **Regression Tests**: Ensure fixed bugs don't reoccur
+  - **Edge Case Tests**: Test boundary conditions (e.g., zero agents, maximum nest capacity)
+  - **Property-Based Tests**: Verify invariants (e.g., total shares sum to 1.0)
+- **Recommended Framework**: pytest
+- **Acceptance Criteria**:
+  - [ ] Minimum 80% code coverage
+  - [ ] All critical paths have unit tests
+  - [ ] Integration tests for agent-nest interactions
+  - [ ] Tests for belief system Bayesian updates
+  - [ ] CI/CD pipeline integration
 
-## 3. 其他问题
+---
 
-### 3.1 搜索历史未实现
-- **文件**: `strategies/male_strategy.py`
-- **问题**: 男性Agent的搜索历史未被跟踪，当前包含所有巢穴
-- **影响**: 可能导致不切实际的行为，如男性Agent可以瞬间访问所有巢穴
-- **修复方案**: 实现搜索历史跟踪，限制男性Agent只能访问已搜索或已分配的巢穴
+## HIGH Priority
 
-### 3.2 最小搜索份额设置不当
-- **文件**: `strategies/male_strategy.py`
-- **问题**: 男性Agent使用了与女性相同的最小搜索份额限制
-- **影响**: 可能不符合男性Agent的行为特性
-- **修复方案**: 为男性Agent设置不同的最小搜索份额，或移除该限制
+### 2. Belief System Implementation Limitations
+- **File**: `strategies/belief_system.py`
+- **Status**: Simplified implementation with known limitations
+- **Impact**: HIGH - Core decision-making component may produce unreliable results
+- **Current Limitations**:
+  - Based on simplified descriptive statistics and naive Bayesian methods
+  - Has NOT undergone rigorous academic review or validation
+  - Belief update logic is intentionally simplified
+  - Does not capture complex cognitive processes
+  - Social learning based on same-gender averages may miss individual differences
+  - Does not account for risk aversion, emotions, or other psychological factors
+  - Belief space representation may not fully capture environmental complexity
+- **Mitigation**: Added disclaimer in class docstring
+- **Future Improvements** (AI methods):
+  - Genetic algorithms for evolving belief update strategies
+  - Reinforcement learning for optimal decision policies
+  - Machine learning for pattern recognition from simulation data
+  - Bayesian networks for complex dependency modeling
+  - Deep reinforcement learning for high-dimensional state spaces
 
-## 4. 新增任务
+### 3. Male Agent Role System Not Implemented
+- **File**: `simulation/game_loop.py`
+- **Status**: All Male agents default to alpha role
+- **Impact**: HIGH - Limits simulation of territorial defense and social dynamics
+- **Expected Behavior**: Distinction between alpha and beta males with different behaviors
+- **Current Behavior**: All males are treated as alpha
+- **Required Implementation**:
+  - Role assignment mechanism (possibly fitness-based or random)
+  - Different behavior patterns for alpha vs beta males
+  - Territorial defense behaviors for alphas
+  - Sneaker strategies for betas
+  - Dynamic role changes based on competition outcomes
 
-### 4.1 实现Debug Log输出到控制台的功能
-- **功能描述**: 将breed share系统的debug log输出到控制台，便于开发和调试过程中实时监控模拟运行状态
-- **预期实现方式**: 修改 `simulation/game_loop.py` 中的logging配置，添加StreamHandler将日志同时输出到控制台，保持文件日志输出功能
-- **完成标准**:
-  - 所有INFO级别及以上的日志同时输出到控制台和 `breed_share_debug.log` 文件
-  - 控制台日志格式与文件日志格式保持一致
-  - 日志输出清晰、易读，包含时间戳、日志级别和详细信息
-  - 不影响模拟运行的性能
+### 4. Debug Logging System Enhancement
+- **File**: `simulation/game_loop.py`
+- **Status**: Basic file logging implemented, console output missing
+- **Impact**: HIGH - Difficult to monitor simulation in real-time
+- **Requirements**:
+  - Add StreamHandler for console output alongside FileHandler
+  - Maintain consistent formatting between console and file logs
+  - Ensure INFO level and above are output to both destinations
+  - Preserve existing `breed_share_debug.log` functionality
+  - Performance impact must be minimal
+- **Use Cases**:
+  - Real-time monitoring during development
+  - Debugging simulation anomalies
+  - Data source for analysis and visualization tools
+  - Training data for ML/AI approaches
 
-## 5. 重要说明
+---
 
-### 5.1 调试日志模块（可插拔组件）
-- **模块位置**: `simulation/game_loop.py` 中的 logging 配置
-- **功能说明**: 当前实现的调试日志模块是一个可插拔的代码基础组件，用于记录模拟运行过程中的策略决策和系统状态
-- **日志文件**: `breed_share_debug.log`
-- **使用方式**: 
-  - 默认启用，记录 INFO 级别及以上的日志信息
-  - 可通过修改 `logging.basicConfig()` 中的 `level` 参数调整日志级别
-  - 可通过添加 `logging.StreamHandler()` 将日志同时输出到控制台
-- **未来扩展**: 
-  - 如需使用 analyze 功能进行可视化分析，可借助日志文件中的数据实现集成
-  - 日志数据可作为机器学习、遗传算法等 AI 方法的训练数据来源
-  - 可通过解析日志文件生成统计报告和可视化图表
+## MEDIUM Priority
 
-### 5.2 Belief System实现的局限性和未来改进方向
-- **当前局限性**: 当前项目中的belief system实现基于简化的贝叶斯更新机制，使用描述性统计和朴素贝叶斯方法。该实现不保证完全正确性，可能存在以下局限性：
-  - 信念更新逻辑较为简单，未考虑复杂的认知过程
-  - 社会学习机制基于同性别个体的平均表现，可能无法捕捉个体差异
-  - 未考虑风险厌恶、情绪等心理因素对决策的影响
-  - 信念空间的表示和更新方式可能无法充分捕捉环境的复杂性
+### 5. Homerange Feature Unused
+- **Files**: `agents/female_agent.py`, `agents/nest.py`
+- **Status**: Code exists but not integrated into core simulation logic
+- **Impact**: MEDIUM - Code redundancy, potential confusion
+- **Current State**: 
+  - Home range is created during initialization
+  - Only used for statistics in report generation
+  - No impact on agent movement or decision-making
+- **Options**:
+  - **Option A**: Integrate into movement logic (agents prefer to stay within home range)
+  - **Option B**: Remove unused code to reduce complexity
+- **Recommendation**: Evaluate whether spatial constraints are needed for research questions
 
-- **未来改进方向**: 计划通过以下人工智能方法对belief system进行进一步优化和探索：
-  - **遗传算法**: 使用遗传算法演化信念更新策略，通过选择、交叉和变异操作优化决策规则
-  - **强化学习**: 将信念更新视为强化学习问题，通过与环境的交互学习最优策略
-  - **机器学习**: 使用监督学习或无监督学习方法从模拟数据中学习更优的信念更新模式
-  - **贝叶斯网络**: 采用更复杂的贝叶斯网络模型表示信念空间，捕捉变量间的依赖关系
-  - **深度强化学习**: 结合深度神经网络和强化学习，处理高维状态空间和复杂决策问题
+### 6. Male Agent Search History Not Implemented
+- **File**: `strategies/male_strategy.py`
+- **Status**: Search history tracking exists but includes ALL nests
+- **Impact**: MEDIUM - Unrealistic behavior (males can "visit" all nests instantly)
+- **Expected Behavior**: 
+  - Males should only know about nests they have physically searched
+  - Limited information about distant nests
+  - Memory decay for old information
+- **Current Behavior**: Males have perfect information about all nests
+- **Implementation Requirements**:
+  - Track visited nests per male agent
+  - Limit mate searching to visited/known nests only
+  - Consider adding exploration vs exploitation trade-off
+
+### 7. Male Agent Search Share Configuration
+- **File**: `strategies/male_strategy.py`
+- **Status**: Males use same minimum search share as females
+- **Impact**: MEDIUM - May not reflect sex-specific behavioral differences
+- **Question**: Should males and females have different constraints on search_share?
+- **Considerations**:
+  - Sexual selection theory predictions
+  - Empirical data on sex differences in parental investment
+  - Parameter sensitivity in simulation outcomes
+
+---
+
+## LOW Priority
+
+### 8. Documentation Improvements
+- **Status**: Basic docstrings exist, but could be enhanced
+- **Impact**: LOW - Affects maintainability and onboarding
+- **Suggestions**:
+  - Add architecture diagrams
+  - Create usage examples
+  - Document configuration parameters
+  - Add contribution guidelines
+
+### 9. Performance Optimization
+- **Status**: Not profiled
+- **Impact**: LOW - Current performance acceptable for research scale
+- **Future Considerations**:
+  - Profile with large agent populations (1000+)
+  - Optimize belief update calculations
+  - Consider parallelization for independent agent updates
+
+---
+
+## Completed Tasks
+
+*None yet*
+
+---
+
+## How to Use This Document
+
+1. **Priority Order**: Work through issues from top to bottom
+2. **Testing First**: Do not implement new features until test coverage is adequate
+3. **Documentation**: Update this file when issues are resolved or new ones discovered
+4. **Severity Assessment**: When adding new issues, consider:
+   - Does it prevent the simulation from running? (CRITICAL)
+   - Does it produce incorrect or unreliable results? (HIGH)
+   - Is it incomplete functionality? (MEDIUM)
+   - Is it an enhancement or optimization? (LOW)
