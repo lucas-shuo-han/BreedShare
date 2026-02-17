@@ -1,4 +1,4 @@
-# Wren Mating System Modeling Project - Technical Document (Final)
+# Breed Share - Technical Document (Final)
 
 ---
 
@@ -84,10 +84,9 @@ CurrentVersion/
 **Responsibility**: Program entry point, responsible for launching the entire simulation system.
 
 **Functions**:
-- **Read Configuration File**: Load all parameters from `config.yaml` or use `config.py` definitions
+- **Read Configuration File**: Load all parameters from `config.py` definitions
 - **Initialize System**: Call initialization function in `initializer/bootstrap.py` to obtain initial state (including world, Agent list, and Orchestrator)
 - **Start Simulation Loop**: Pass initialized state to `simulation/game_loop.py` to begin day-by-day simulation advancement
-- **Generate Report**: After simulation ends, call `analysis/reporter.py` or report generation function to generate result report
 
 **Key Points**:
 - `main.py` does not directly participate in any specific initialization logic, only responsible for calling and passing control
@@ -668,42 +667,25 @@ SEARCH_COST = 0.5
 
 ---
 
-## 6. Output and Analysis
+## 6. Engineering Constraints
 
-### 6.1 Simulation Output
-
-- **Daily Nest Resources**: Record daily resource accumulation for each nest
-- **Agent Fitness**: Calculate and record fitness for each agent
-- **Mating System Statistics**: Record daily mating system statistics
-
-### 6.2 Data Analysis
-
-**analysis/reporter.py** or **analysis/mating_system_analyzer.py**:
-- **Nest Composition**: Analyze female and male composition of each nest
-- **Resource Allocation**: Analyze resource allocation among different nests and agents
-- **Fitness Distribution**: Analyze distribution and trends of agent fitness
-
----
-
-## 7. Engineering Constraints
-
-### 7.1 Code Quality Requirements
+### 6.1 Code Quality Requirements
 
 - All function signatures must use type annotations
-- All parameters must come from config.yaml or config.py
+- All parameters must come from config.py
 - No hard-coding of parameters allowed
 - No new parameters allowed in code
 - Enforce PEP 8 standards rigorously
 - Comprehensive type hinting as contract to make model assumptions explicit
 
-### 7.2 Performance Considerations
+### 6.2 Performance Considerations
 
 - Computational complexity: O(N) per round (reduced from O(N!))
 - Stateless Strategy allows batch parallelization
 - Pure function characteristics enable decision computation parallelization without write conflicts
 - Large-scale simulations feasible on standard hardware
 
-### 7.3 Design Principles
+### 6.3 Design Principles
 
 - **Agent-Strategy Decoupling**: Strategy can be hot-swapped without modifying Agent code
 - **State Consistency**: Centralized management of cross-entity state updates
@@ -712,7 +694,7 @@ SEARCH_COST = 0.5
 
 ---
 
-## 8. Extension and Improvement Directions
+## 7. Extension and Improvement Directions
 
 1. **Strategy Expansion**: Support more types of strategies, such as genetic algorithm-based strategies
 2. **Environmental Complexity**: Increase environmental dynamics, such as seasonal resource variation
@@ -725,39 +707,39 @@ SEARCH_COST = 0.5
 
 ---
 
-## 9. Mathematical Formulas Reference
+## 8. Mathematical Formulas Reference
 
-### 9.1 Search Success Probability
+### 8.1 Search Success Probability
 $$
 p_i = 1 - \exp\left(-\lambda \cdot \frac{\text{search\_share}}{d_i}\right)
 $$
 
-### 9.2 Budget Constraint
+### 8.2 Budget Constraint
 $$
 \text{search\_share} + \sum_{k \in \text{nests}} \text{raising\_share}_k = 1.0
 $$
 
-### 9.3 Logistic Conversion
+### 8.3 Logistic Conversion
 $$
 \text{fledglings}_k = \frac{K}{1 + \exp\{-r \cdot (R_{\text{total},k} - R_0)\}}
 $$
 
-### 9.4 Female Payoff
+### 8.4 Female Payoff
 $$
 \text{payoff}_{\text{female}} = \sum_{k \in \text{her\_nests}} \text{fledglings}_k - c_{\text{egg}}
 $$
 
-### 9.5 Male Payoff
+### 8.5 Male Payoff
 $$
 \text{payoff}_{\text{male}} = \sum_k \left( \frac{\text{raising\_share}_{\text{male},k}}{\sum \text{raising\_share}_k} \times \text{fledglings}_k \right)
 $$
 
-### 9.6 Marginal Utility
+### 8.6 Marginal Utility
 $$
 \text{MU}_k(r_k) = \frac{\mathcal{F}(r_k + \hat{o}_k + \Delta, \mathbf{p}_k) - \mathcal{F}(r_k + \hat{o}_k, \mathbf{p}_k)}{\Delta}
 $$
 
-### 9.7 Bayesian Update
+### 8.7 Bayesian Update
 $$
 \text{search\_share}_{t+1} = \text{BayesianUpdate}\left(\text{search\_share}_t \mid \text{social\_learning\_evidence}_t\right)
 $$

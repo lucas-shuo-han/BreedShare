@@ -11,11 +11,10 @@ from simulation.orchestrator import Orchestrator
 from strategies.female_strategy import FemaleStrategy
 from strategies.male_strategy import MaleStrategy
 from core.fitness import mine_resources
-from analysis.mating_system_analyzer import MatingSystemAnalyzer
 
 # Set up logging for strategy decisions
 logging.basicConfig(
-    filename='mating_system_debug.log',
+    filename='breed_share_debug.log',
     level=logging.INFO,  # Set to INFO to capture strategy decisions
     format='%(asctime)s - %(levelname)s - %(message)s',
     filemode='w'  # Overwrite log file each time
@@ -75,9 +74,6 @@ class GameLoop:
         
         # Daily strategy cache: Agent ID -> Strategy decisions
         self._daily_strategy_cache: Dict[int, Dict[str, Any]] = {}
-        
-        # Mating system analyzer for daily statistics
-        self.mating_system_analyzer = MatingSystemAnalyzer()
     
     def run(self, num_days: int) -> Dict[str, Any]:
         """
@@ -92,8 +88,7 @@ class GameLoop:
         results: Dict[str, Any] = {
             'days_completed': 0,
             'daily_nest_resources': [],
-            'agent_fitness': {},
-            'mating_system_analyzer': self.mating_system_analyzer
+            'agent_fitness': {}
         }
         
         for day in range(num_days):
@@ -104,9 +99,6 @@ class GameLoop:
             
             # Record daily results
             results['daily_nest_resources'].append(daily_results['nest_resources'])
-            
-            # Record mating system statistics for this day
-            self.mating_system_analyzer.record_daily_statistics(day, self.world_state, self.male_agents)
             
             # Increment completed days
             results['days_completed'] += 1

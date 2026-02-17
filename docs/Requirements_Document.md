@@ -1,4 +1,4 @@
-# Wren Mating System Modeling Project - Requirements Document (Final)
+# BreedShare - Requirements Document
 
 ---
 
@@ -6,7 +6,7 @@
 
 ### 1.1 Project Core Goal (Technical Version)
 
-**Objective**: Build a grid-based agent model that simulates individuals maximizing fitness through search and resource investment decisions under limited energy budgets.
+**Objective**: Build a discrete Agent Based Model (ABM) that simulates individuals maximizing fitness through search and resource investment decisions under limited energy budgets.
 
 **Deliverable**: A Python package containing a configurable simulator that outputs per-round individual fitness and nest state data.
 
@@ -34,7 +34,7 @@ The model explores how the spatiotemporal distribution of resources drives the d
 
 #### 2.1.1 Resource Map Generation (world_generator.py)
 
-**Requirement**: Generate a 500×500 resource grid using negative binomial distribution, parameterizing both total resource abundance and spatial aggregation.
+**Requirement**: Generate a 500×500 resource grid using Negative Binomial (NB) distribution, parameterizing both total resource abundance and spatial aggregation.
 
 **Refactor: Replace Patch Model with Negative Binomial Distribution**
 
@@ -47,15 +47,15 @@ Critically, this simplification does not sacrifice realism: the original patch m
 A potential consideration is whether territories containing many patches might approximate a normal distribution by the Central Limit Theorem. This is unlikely for three reasons:
 1. Mating system evolution depends on population-level aggregation, captured by the negative binomial's higher moments
 2. Individual fitness is determined by territory size, not within-territory patchiness
-3. The Central Limit Theorem's assumptions need not be met, as territories do not require large numbers of patches
+3. The Central Limit Theorem's assumptions are not met, as patches are not independent random variables because of the NB parameterization.
 
-**Implementation Design**: `world_generator.py` generates a 500×500 base grid, with large-scale simulations capable of further expansion. During decision-making, use local statistical proxies instead of per-cell calculations to balance precision with computational power.
+**Implementation Design**: `world_generator.py` generates a 500×500 base grid, with large-scale simulations capable of further expansion. During decision-making, use local statistical proxies instead of per-cell calculations to balance precision with computational efficiency.
 
 **Configuration Parameters**: Uses `GRID_SIZE`, `RESOURCE_LEVEL`, and `AGGREGATION_LEVEL` from `config/config.py`.
 
 #### 2.1.2 World State Management (world_state.py)
 
-**Requirement**: Serve as the environment state registry and global state query center, following the "data service layer" principle to provide all agents with a single source of environmental truth.
+**Requirement**: Serve as the environment state registry and global state query center, following the "data service layer" principle to provide all agents with a single source of environmental information.
 
 **Core Responsibilities**:
 - **Nest Lifecycle Management**: Create and destroy nests, maintain `nests: Dict[int, Nest]` registry
@@ -198,7 +198,7 @@ Where **search_share** quantifies investment in exploring unknown mates and terr
 
 #### 2.3.2 Mating Game Formal Definition
 
-**[Core Definition]** This chapter defines the project's mathematical foundation—the complete formal structure of the wren mating game. This game is the single source of truth for all subsequent simulation, analysis, and theoretical derivation.
+**[Core Definition]** This chapter defines the project's mathematical foundation—the complete formal structure of the breed share game. This game is the single source of truth for all subsequent simulation and theoretical derivation.
 
 According to game theory, any solvable game must explicitly define four elements and equilibrium concepts:
 
@@ -477,7 +477,7 @@ This framework yields three crucial advantages:
 
 #### 2.4.3 Entry Point (main.py)
 
-**Responsibility**: Read config.yaml parameters, initialize WorldGenerator to create resource map, instantiate Agents and Strategies, start simulation loop, call reporter to generate analysis report.
+**Responsibility**: Read config.py parameters, initialize WorldGenerator to create resource map, instantiate Agents and Strategies, start simulation loop.
 
 **Code Example**:
 ```python
@@ -485,7 +485,6 @@ def main():
     world_state, female_agents, male_agents, orchestrator = bootstrap()
     game_loop = GameLoop(world_state, female_agents, male_agents, orchestrator)
     simulation_results = game_loop.run(num_days)
-    reporter.generate_report(simulation_results, report_path)
 ```
 
 ### 2.5 Fitness Functions: Mapping Resources to Offspring Survival
@@ -619,24 +618,7 @@ Where K is half-saturation constant, R is actual resource amount, r is conversio
 
 ---
 
-## 5. Output and Analysis Requirements
-
-### 5.1 Simulation Output
-
-- **Daily Nest Resources**: Record daily resource accumulation for each nest
-- **Agent Fitness**: Calculate and record fitness for each agent
-- **Mating System Statistics**: Record daily mating system statistics through `MatingSystemAnalyzer`
-
-### 5.2 Data Analysis
-
-Use `analysis/mating_system_analyzer.py` or `analysis/reporter.py` to analyze simulation results, including:
-- **Nest Composition**: Analyze female and male composition of each nest
-- **Resource Allocation**: Analyze resource allocation among different nests and agents
-- **Fitness Distribution**: Analyze distribution and trends of agent fitness
-
----
-
-## 6. Future Enhancement Paths
+## 5. Future Enhancement Paths
 
 **Strategy Expansion** (currently hard-coded in initial version):
 - **Risk Aversion**: Introduce variance penalty term in payoff function
@@ -645,16 +627,16 @@ Use `analysis/mating_system_analyzer.py` or `analysis/reporter.py` to analyze si
 
 **System Expansion Directions**:
 1. **Strategy Expansion**: Support more types of strategies, such as genetic algorithm-based strategies
-2. **Environmental Complexity**: Increase environmental dynamics, such as seasonal resource variation
+2. **Environmental Complexity**: Increase environmental dynamics, such as seasonal resource variation, resource redistribution
 3. **Agent Behavior**: Expand agent behavior patterns, such as territory defense, mate choice, etc.
 4. **Visualization**: Add real-time visualization functionality to display simulation process
 5. **Performance Optimization**: Optimize simulation performance, support larger scale agents and longer duration simulations
 
 ---
 
-## 7. Biological Justifications and References
+## 6. Biological Justifications and References
 
-### 7.1 Key Biological References
+### 6.1 Key Biological References
 
 - **Birkhead 1981**: Wren territory establishment mechanism, social learning in birds
 - **Bishton 1986**: Individuals forming stable groups around fixed resource points
@@ -662,7 +644,7 @@ Use `analysis/mating_system_analyzer.py` or `analysis/reporter.py` to analyze si
 - **Davies 1986**: Logistic conversion biological plausibility (Fig.3)
 - **Davies 1992**: Paternity allocation literature (to be cited for key simplification assumption)
 
-### 7.2 Key Modeling Assumptions
+### 6.2 Key Modeling Assumptions
 
 1. **Energy Budget Constraint**: All individuals have energy budget = 1.0 (can be extended to `agent.energy_budget` for individual heterogeneity)
 2. **Paternity Proportional to Raising Share**: Key simplification requiring defensive argumentation
@@ -673,7 +655,7 @@ Use `analysis/mating_system_analyzer.py` or `analysis/reporter.py` to analyze si
 
 ---
 
-## 8. Implementation Phases
+## 7. Implementation Phases
 
 ### Phase 1: Foundation (Implemented by Developer)
 - Implement game_loop.py main loop framework (without specific extraction logic)
@@ -686,10 +668,4 @@ Use `analysis/mating_system_analyzer.py` or `analysis/reporter.py` to analyze si
 - Implement fitness.py resource extraction and calculation functions
 - Implement female_strategy.py and male_strategy.py decision logic
 
-### Phase 3: Analysis and Reporting
-- Implement reporter.py or mating_system_analyzer.py
-- Generate statistical summaries and visualizations
 
----
-
-*Document compiled from: demand_text.md, demand_text_latest.md, demand_text_ttb.md, raw_ideas.md, technical_documentation.md, technical_documentation_new.md*

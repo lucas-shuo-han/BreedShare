@@ -20,6 +20,13 @@ class BeliefSystem:
     
     Both updates are stored and normalized independently within the system.
     Simplified version: Only tracks mean values (no variance) for risk-neutral agents.
+    
+    IMPORTANT NOTICE:
+    This implementation is a simplified version based on descriptive statistics and naive Bayesian methods.
+    It has NOT undergone rigorous academic review or validation. The belief update logic is intentionally
+    simplified and may not fully capture complex cognitive processes, individual differences, or psychological
+    factors such as risk aversion and emotions. Users should be cautious when using this for research
+    purposes and consider it as a starting point for further development rather than a definitive solution.
     """
     
     def __init__(self):

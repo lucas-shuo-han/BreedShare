@@ -1,6 +1,6 @@
-# Wren Mating System Model
+# Breed Share
 
-Agent-based model simulating wren mating system dynamics via energy allocation strategies.
+Agent-based model simulating mating system dynamics via energy allocation strategies.
 
 ## Core Idea
 
@@ -11,7 +11,7 @@ This model abstracts all reproductive behaviors as allocations of a finite energ
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd MatingSystem/CurrentVersion
+cd BreedShare/CurrentVersion
 
 # Install dependencies
 pip install numpy
@@ -58,6 +58,24 @@ The simulation produces:
 - **Daily nest resources**: Resource accumulation per nest per round
 - **Agent fitness**: Individual payoff calculations for males and females
 - **Mating system statistics**: Nest composition, resource allocation patterns, fitness distributions
+- **Debug logs**: Strategy decisions and system states are logged to `breed_share_debug.log`
+
+### Debug Logging (Pluggable Component)
+
+The debug logging module is a pluggable code component located in `simulation/game_loop.py`. It records:
+- Agent strategy decisions (search_share and raising_shares)
+- System state changes
+- Runtime information for debugging and analysis
+
+**Features:**
+- Default log file: `breed_share_debug.log`
+- Log level: INFO and above
+- Format: timestamp - log level - message
+
+**Future Extensions:**
+- The log data can be used for visualization and analysis
+- Integrate with machine learning and genetic algorithm training
+- Generate statistical reports and visualizations by parsing log files
 
 ## Documentation
 
@@ -118,7 +136,7 @@ This project is released under the MIT License. See LICENSE for details.
 If you use this model in your research, please cite:
 
 ```
-Wren Mating System Model. (2024). Agent-based simulation of avian mating 
+Breed Share. (2024). Agent-based simulation of mating 
 system dynamics via energy allocation strategies. 
 GitHub: <repository-url>
 ```
@@ -129,6 +147,3 @@ Key references used in model development:
 - Davies (1986) - Parental investment and fitness functions
 - Bishton (1986) - Spatial distribution patterns
 
----
-
-*For questions or contributions, please open an issue on the repository.*
