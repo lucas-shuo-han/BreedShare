@@ -51,6 +51,8 @@ A potential consideration is whether territories containing many patches might a
 
 **Implementation Design**: `world_generator.py` generates a 500×500 base grid, with large-scale simulations capable of further expansion. During decision-making, use local statistical proxies instead of per-cell calculations to balance precision with computational power.
 
+**Configuration Parameters**: Uses `GRID_SIZE`, `RESOURCE_LEVEL`, and `AGGREGATION_LEVEL` from `config/config.py`.
+
 #### 2.1.2 World State Management (world_state.py)
 
 **Requirement**: Serve as the environment state registry and global state query center, following the "data service layer" principle to provide all agents with a single source of environmental truth.
@@ -564,13 +566,13 @@ Where K is half-saturation constant, R is actual resource amount, r is conversio
 
 ## 4. Configuration Parameters
 
-### 4.1 Required Configuration Parameters (config.yaml / config.py)
+### 4.1 Required Configuration Parameters (config.py)
 
 **Global Parameters**:
 | Parameter | Description | Default Value |
 |-----------|-------------|---------------|
 | RANDOM_SEED | Random seed | 42 |
-| grid_size / GRID_SIZE | Grid size | 500 |
+| GRID_SIZE | Grid size | 500 |
 | initial_female_count | Initial female count | 20 |
 | initial_male_count | Initial male count | 20 |
 | simulation_rounds | Simulation rounds | 5 |
@@ -578,35 +580,32 @@ Where K is half-saturation constant, R is actual resource amount, r is conversio
 **World Parameters**:
 | Parameter | Description | Default Value |
 |-----------|-------------|---------------|
-| world.grid_size | Grid size | 500 |
-| world.resource_level / RESOURCE_LEVEL | Resource level | 0.5 / 100 |
-| world.aggregation_level / AGGREGATION_LEVEL | Aggregation level | 0.3 / 5 |
+| RESOURCE_LEVEL | Resource level | 100 |
+| AGGREGATION_LEVEL | Aggregation level | 5 |
 
 **Search Parameters**:
 | Parameter | Description | Default Value |
 |-----------|-------------|---------------|
-| SEARCH_COST / search_cost | Search efficiency constant λ | 0.5 |
+| SEARCH_COST | Search efficiency constant λ | 0.5 |
 
 **Fitness Calculation Parameters**:
 | Parameter | Description | Default Value |
 |-----------|-------------|---------------|
-| raising_success.logistic_K / LOGISTIC_K | Logistic function maximum | 1.0 / 10 |
-| raising_success.logistic_r / LOGISTIC_R | Logistic function growth rate | 0.5 / 0.1 |
-| raising_success.logistic_A / LOGISTIC_A | Logistic function parameter | 1e-6 / 100 |
+| LOGISTIC_K | Logistic function maximum | 10 |
+| LOGISTIC_R | Logistic function growth rate | 0.1 |
+| LOGISTIC_A | Logistic function parameter | 100 |
 
 **Extraction Parameters**:
 | Parameter | Description | Default Value |
 |-----------|-------------|---------------|
-| resource_extraction_rho / RESOURCE_EXTRACTION_RATE | Resource extraction rate ρ | 0.33 / 0.3 [To be confirmed] |
+| RESOURCE_EXTRACTION_RATE | Resource extraction rate ρ | 0.3 |
 
 **Allocation Parameters**:
 | Parameter | Description | Default Value |
 |-----------|-------------|---------------|
-| ALLOCATION_STEPS / allocation_steps | Greedy iteration steps | 20 |
-| MARGINAL_DELTA / marginal_delta | Marginal utility calculation step | 0.01 |
+| ALLOCATION_STEPS | Greedy iteration steps | 20 |
+| MARGINAL_DELTA | Marginal utility calculation step | 0.01 |
 | HOME_RANGE_RADIUS | Home range radius | 3 |
-
-**Note**: There are conflicting default values between different versions for some parameters (e.g., RESOURCE_LEVEL: 0.5 vs 100, LOGISTIC_K: 1.0 vs 10). [Note: conflicting information from versions, please verify]
 
 ### 4.2 Pending Technical Issues and Parameter System
 

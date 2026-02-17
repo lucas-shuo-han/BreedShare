@@ -24,75 +24,54 @@ This project adopts a layered generative architecture, with construction sequenc
 - `simulation/game_loop.py`: Manages daily micro-step iteration and Shuffle mechanism
 - `simulation/orchestrator.py`: Serves as runtime binding layer, dynamically associating Agents with Strategies, ensuring state consistency
 
-**Layer 5: Analysis Output**
-- `analysis/reporter.py` or `analysis/mating_system_analyzer.py`: Collects simulation data and generates statistical summaries and visualizations
-
-This architecture achieves 100% external configuration of parameters through `config/config.yaml` or `config/config.py`, with all inter-layer interfaces using type annotations as contracts.
+This architecture achieves 100% external configuration of parameters through `config/config.py`, with all inter-layer interfaces using type annotations as contracts.
 
 ### 1.2 Project Directory Structure
 
-**Version 1 Structure (from technical_documentation.md)**:
-```
-project/
-├── config/
-│   └── config.yaml          # All parameters must be defined here, no hard-coding
-├── core/
-│   ├── base_agent.py        # Define Agent base class
-│   ├── base_strategy.py     # Define Strategy abstract base class
-│   └── fitness.py           # Fitness calculation pure functions
-├── agents/
-│   ├── nest.py              # Nest data class
-│   ├── female_agent.py      # FemaleAgent data class
-│   └── male_agent.py        # MaleAgent data class
-├── strategies/
-│   ├── belief_system.py     # Belief update implementation
-│   ├── female_strategy.py   # Female decision implementation
-│   └── male_strategy.py     # Male decision implementation
-├── simulation/
-│   ├── game_loop.py         # Main loop: shuffle -> execute
-│   └── orchestrator.py      # Agent-Strategy binding and state sync
-├── world/
-│   ├── world_generator.py   # Resource map generator
-│   └── world_state.py       # Environment state manager
-├── analysis/
-│   └── reporter.py          # Result summary
-└── initializer/
-    └── bootstrap.py         # System initialization
-```
-
-**Version 2 Structure (from technical_documentation_new.md)**:
+**Current Project Structure**:
 ```
 CurrentVersion/
+├── agents/
+│   ├── __init__.py
+│   ├── female_agent.py      # FemaleAgent class
+│   ├── male_agent.py        # MaleAgent class
+│   └── nest.py              # Nest data class
 ├── config/
+│   ├── __init__.py
 │   └── config.py            # All configuration parameter definitions
 ├── core/
+│   ├── __init__.py
 │   ├── base_agent.py        # Agent base class definition
 │   ├── base_strategy.py     # Strategy abstract base class
 │   └── fitness.py           # Fitness calculation functions
-├── agents/
-│   ├── nest.py              # Nest data class
-│   ├── female_agent.py      # FemaleAgent class
-│   └── male_agent.py        # MaleAgent class
+├── docs/
+│   ├── Requirements_Document.md
+│   └── Technical_Document.md
+├── initializer/
+│   ├── __init__.py
+│   └── bootstrap.py         # System initialization
+├── simulation/
+│   ├── __init__.py
+│   ├── game_loop.py         # Main loop implementation
+│   └── orchestrator.py      # Agent-Strategy binding and state sync
 ├── strategies/
+│   ├── __init__.py
 │   ├── belief_system.py     # Belief update system
 │   ├── female_strategy.py   # Female decision implementation
 │   └── male_strategy.py     # Male decision implementation
-├── simulation/
-│   ├── game_loop.py         # Main loop implementation
-│   └── orchestrator.py      # Agent-Strategy binding and state sync
+├── test/
+│   └── test_home_range.py
 ├── world/
+│   ├── __init__.py
 │   ├── world_generator.py   # Resource map generator
 │   └── world_state.py       # Environment state manager
-├── analysis/
-│   └── mating_system_analyzer.py  # Mating system analyzer
-├── initializer/
-│   └── bootstrap.py         # System initialization
-├── main.py                  # Program entry
-└── docs/
-    └── technical_documentation_new.md  # Technical implementation document
+├── .gitignore
+├── README.md
+├── TODO.md
+└── main.py                  # Program entry
 ```
 
-**Note**: Different versions show variations in configuration file format (config.yaml vs config.py) and analysis module naming (reporter.py vs mating_system_analyzer.py). [Note: conflicting information from versions, please verify]
+**Configuration File**: Uses `config/config.py` for all parameter definitions.
 
 ---
 
@@ -616,71 +595,27 @@ $$
 
 ### 4.1 Configuration Parameters Table
 
-All configuration parameters defined in `config/config.yaml` or `config/config.py`:
+All configuration parameters defined in `config/config.py`:
 
 | Parameter | Description | Default Value | Source |
 |-----------|-------------|---------------|--------|
-| RANDOM_SEED | Random seed | 42 | technical_documentation_new.md |
-| grid_size / GRID_SIZE | Grid size | 500 | All versions |
-| initial_female_count | Initial female count | 20 | technical_documentation.md |
-| initial_male_count | Initial male count | 20 | technical_documentation.md |
-| simulation_rounds | Simulation rounds | 5 | technical_documentation.md |
-| world.grid_size | Grid size (world section) | 500 | technical_documentation.md |
-| world.resource_level | Resource level | 0.5 | technical_documentation.md |
-| world.aggregation_level | Aggregation level | 0.3 | technical_documentation.md |
-| RESOURCE_LEVEL | Resource level | 100 | technical_documentation_new.md |
-| AGGREGATION_LEVEL | Aggregation level | 5 | technical_documentation_new.md |
-| SEARCH_COST / search_cost | Search efficiency constant λ | 0.5 | technical_documentation.md |
-| raising_success.logistic_K | Logistic function maximum | 1.0 | technical_documentation.md |
-| raising_success.logistic_r | Logistic function growth rate | 0.5 | technical_documentation.md |
-| raising_success.logistic_A | Logistic function parameter | 1e-6 | technical_documentation.md |
-| LOGISTIC_K | Logistic function maximum | 10 | technical_documentation_new.md |
-| LOGISTIC_R | Logistic function growth rate | 0.1 | technical_documentation_new.md |
-| LOGISTIC_A | Logistic function parameter | 100 | technical_documentation_new.md |
-| resource_extraction_rho | Resource extraction rate ρ | 0.33 | technical_documentation.md |
-| RESOURCE_EXTRACTION_RATE | Resource extraction rate | 0.3 | technical_documentation_new.md |
-| HOME_RANGE_RADIUS | Home range radius | 3 | technical_documentation_new.md |
-| ALLOCATION_STEPS / allocation_steps | Greedy iteration steps | 20 | All versions |
-| MARGINAL_DELTA / marginal_delta | Marginal utility step | 0.01 | All versions |
-
-**Note**: There are significant differences in default values between versions for several parameters:
-- RESOURCE_LEVEL: 0.5 vs 100
-- AGGREGATION_LEVEL: 0.3 vs 5
-- LOGISTIC_K: 1.0 vs 10
-- LOGISTIC_R: 0.5 vs 0.1
-- LOGISTIC_A: 1e-6 vs 100
-- resource_extraction_rho: 0.33 vs 0.3
-
-[Note: conflicting information from versions, please verify]
+| RANDOM_SEED | Random seed | 42 | config.py |
+| GRID_SIZE | Grid size | 500 | config.py |
+| RESOURCE_LEVEL | Resource level | 100 | config.py |
+| AGGREGATION_LEVEL | Aggregation level | 5 | config.py |
+| SEARCH_COST | Search efficiency constant λ | 0.5 | config.py |
+| LOGISTIC_K | Logistic function maximum | 10 | config.py |
+| LOGISTIC_R | Logistic function growth rate | 0.1 | config.py |
+| LOGISTIC_A | Logistic function parameter | 100 | config.py |
+| RESOURCE_EXTRACTION_RATE | Resource extraction rate ρ | 0.3 | config.py |
+| HOME_RANGE_RADIUS | Home range radius | 3 | config.py |
+| ALLOCATION_STEPS | Greedy iteration steps | 20 | config.py |
+| MARGINAL_DELTA | Marginal utility step | 0.01 | config.py |
+| initial_female_count | Initial female count | 20 | config.py |
+| initial_male_count | Initial male count | 20 | config.py |
+| simulation_rounds | Simulation rounds | 5 | config.py |
 
 ### 4.2 Configuration File Format
-
-**YAML Format (config.yaml)**:
-```yaml
-# Global parameters
-grid_size: 500
-initial_female_count: 20
-initial_male_count: 20
-simulation_rounds: 5
-
-# World parameters
-world:
-  grid_size: 500
-  resource_level: 0.5
-  aggregation_level: 0.3
-
-# Search parameters
-SEARCH_COST: 0.5
-
-# Fitness calculation parameters
-raising_success:
-  logistic_K: 1.0
-  logistic_r: 0.5
-  logistic_A: 1e-6
-
-# Extraction parameters
-resource_extraction_rho: 0.33
-```
 
 **Python Format (config.py)**:
 ```python
@@ -695,9 +630,13 @@ MARGINAL_DELTA = 0.01
 LOGISTIC_K = 10
 LOGISTIC_A = 100
 LOGISTIC_R = 0.1
+initial_female_count = 20
+initial_male_count = 20
+simulation_rounds = 5
+SEARCH_COST = 0.5
 ```
 
-[Note: conflicting information from versions, please verify which format to use]
+**Note**: The project uses `config/config.py` for all configuration parameters. config.yaml is not used in the current implementation.
 
 ---
 
