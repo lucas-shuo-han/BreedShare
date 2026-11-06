@@ -1,39 +1,42 @@
-# world/world_generator.py
+"""Resource landscape.
+
+Resources follow a gamma-Poisson (negative binomial) process:
+
+* A persistent **habitat quality** field is drawn once per run. Each patch of
+  `patch_size` x `patch_size` cells gets a gamma-distributed quality with mean 1;
+  `aggregation_level` sets how unequal patches are.
+* Each round, the **resources** in every cell are drawn fresh as
+  Poisson(quality x resource_level), so a cell's daily value is negative
+  binomial and neighbouring cells are correlated through their shared patch.
+"""
 import numpy as np
 from numpy.typing import NDArray
 
+from config.config import Config
+
+# Resources are counted in units of 1/RESOURCE_GRAIN so the Poisson draw is not too coarse.
+RESOURCE_GRAIN = 10.0
+
+
 class WorldGenerator:
-    """
-    WorldGenerator class for generating the world. 500 * 500 gridline with discrete resource level.
-    """
-    def __init__(self, grid_size: int, resource_level: float, aggregation: float):
-        """
-        Initialize the WorldGenerator class.
-        :param grid_size: grid size for the world, unchanged
-        :param resource_level: resource level, between 0 and 1
-        :param aggregation: aggregation level, between 0 and 1
-        """
-        self.grid_size = grid_size
-        self.resource_level = resource_level
-        self.aggregation = aggregation
+    def __init__(self, config: Config, rng: np.random.Generator):
+        self.config = config
+        self.rng = rng
 
-        # calculate negative binomial distribution parameters
-        self.n = int(max(1.0, 10.0 / self.aggregation)) if self.aggregation > 0 else 100 # to capture the effect of aggregation
-        self.p = self.n / (self.n + self.resource_level) # to make sure mean is equal to resource_level
+    def generate_habitat(self) -> NDArray[np.float64]:
+        """Mean resource per cell, fixed for the whole run."""
+        c = self.config
+        n_patches = int(np.ceil(c.grid_size / c.patch_size))
+        a = min(max(c.aggregation_level, 0.0), 0.99)
+        if a == 0.0:
+            quality = np.ones((n_patches, n_patches))
+        else:
+            shape = (1.0 - a) / a  # gamma shape k; smaller k = more aggregated
+            quality = self.rng.gamma(shape, 1.0 / shape, size=(n_patches, n_patches))
+        habitat = np.kron(quality, np.ones((c.patch_size, c.patch_size)))
+        return habitat[: c.grid_size, : c.grid_size] * c.resource_level
 
-    def generate_resources(self) -> NDArray[np.float32]:
-        """
-        Generate resources for the world.
-        :return: a 2D numpy array of resources
-        """
-        raw_grid: NDArray[np.int64] = np.random.negative_binomial(
-            n=self.n,
-            p=self.p,
-            size=(self.grid_size, self.grid_size)
-        )
-        
-        normalized_grid: NDArray[np.float32] = (
-            raw_grid.astype(np.float32) / np.sum(raw_grid)
-        ) * (self.grid_size ** 2)
-
-        return normalized_grid.astype(np.float32)
+    def generate_resources(self, habitat: NDArray[np.float64]) -> NDArray[np.float64]:
+        """One round's resources, drawn around the habitat means."""
+        counts = self.rng.poisson(habitat * RESOURCE_GRAIN)
+        return counts.astype(np.float64) / RESOURCE_GRAIN

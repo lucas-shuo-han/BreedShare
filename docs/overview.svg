@@ -1,0 +1,197 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 520" width="960" height="520" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <style>
+    .bg { fill: #ffffff; }
+    .card { fill: #f6f7f9; stroke: #d8dce2; }
+    .ink { fill: #1f2328; }
+    .muted { fill: #59636e; }
+    .line { stroke: #8c959f; }
+    .search { fill: #e0912f; }
+    .raise { fill: #2a9d8f; }
+    .raise2 { fill: #7cc6bc; }
+    .female { fill: #c2557a; }
+    .male { fill: #3b6fb6; }
+    .care { stroke: #59636e; }
+    .patch { fill: #2a9d8f; }
+    .curve { stroke: #2a9d8f; }
+    .num { fill: #ffffff; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .card { fill: #161b22; stroke: #30363d; }
+      .ink { fill: #e6edf3; }
+      .muted { fill: #9198a1; }
+      .line { stroke: #6e7681; }
+      .care { stroke: #9198a1; }
+      .num { fill: #0d1117; }
+    }
+    .h1 { font-size: 20px; font-weight: 700; }
+    .h2 { font-size: 15px; font-weight: 650; }
+    .t { font-size: 12.5px; }
+    .s { font-size: 11px; }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="muted"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="520" rx="12"/>
+
+  <text class="ink h1" x="24" y="38">One round of BreedShare</text>
+  <text class="muted t" x="24" y="58">Every bird spends the same budget of 1. Everything else follows from how it is split.</text>
+
+  <!-- ===== Card 1: world ===== -->
+  <rect class="card" x="20" y="78" width="210" height="220" rx="10"/>
+  <circle class="ink" cx="42" cy="102" r="11"/><text class="num s" x="42" y="106" text-anchor="middle" font-weight="700">1</text>
+  <text class="ink h2" x="60" y="107">Patchy world</text>
+  <g transform="translate(45,124)">
+    <!-- 7 x 4 habitat patches; opacity = quality -->
+    <rect class="patch" x="0"   y="0"  width="20" height="20" rx="3" opacity="0.15"/>
+    <rect class="patch" x="23"  y="0"  width="20" height="20" rx="3" opacity="0.25"/>
+    <rect class="patch" x="46"  y="0"  width="20" height="20" rx="3" opacity="0.85"/>
+    <rect class="patch" x="69"  y="0"  width="20" height="20" rx="3" opacity="0.95"/>
+    <rect class="patch" x="92"  y="0"  width="20" height="20" rx="3" opacity="0.3"/>
+    <rect class="patch" x="115" y="0"  width="20" height="20" rx="3" opacity="0.1"/>
+    <rect class="patch" x="138" y="0"  width="20" height="20" rx="3" opacity="0.2"/>
+    <rect class="patch" x="0"   y="23" width="20" height="20" rx="3" opacity="0.2"/>
+    <rect class="patch" x="23"  y="23" width="20" height="20" rx="3" opacity="0.45"/>
+    <rect class="patch" x="46"  y="23" width="20" height="20" rx="3" opacity="0.7"/>
+    <rect class="patch" x="69"  y="23" width="20" height="20" rx="3" opacity="0.5"/>
+    <rect class="patch" x="92"  y="23" width="20" height="20" rx="3" opacity="0.15"/>
+    <rect class="patch" x="115" y="23" width="20" height="20" rx="3" opacity="0.35"/>
+    <rect class="patch" x="138" y="23" width="20" height="20" rx="3" opacity="0.6"/>
+    <rect class="patch" x="0"   y="46" width="20" height="20" rx="3" opacity="0.1"/>
+    <rect class="patch" x="23"  y="46" width="20" height="20" rx="3" opacity="0.2"/>
+    <rect class="patch" x="46"  y="46" width="20" height="20" rx="3" opacity="0.25"/>
+    <rect class="patch" x="69"  y="46" width="20" height="20" rx="3" opacity="0.15"/>
+    <rect class="patch" x="92"  y="46" width="20" height="20" rx="3" opacity="0.2"/>
+    <rect class="patch" x="115" y="46" width="20" height="20" rx="3" opacity="0.75"/>
+    <rect class="patch" x="138" y="46" width="20" height="20" rx="3" opacity="0.9"/>
+    <rect class="patch" x="0"   y="69" width="20" height="20" rx="3" opacity="0.4"/>
+    <rect class="patch" x="23"  y="69" width="20" height="20" rx="3" opacity="0.15"/>
+    <rect class="patch" x="46"  y="69" width="20" height="20" rx="3" opacity="0.1"/>
+    <rect class="patch" x="69"  y="69" width="20" height="20" rx="3" opacity="0.2"/>
+    <rect class="patch" x="92"  y="69" width="20" height="20" rx="3" opacity="0.1"/>
+    <rect class="patch" x="115" y="69" width="20" height="20" rx="3" opacity="0.45"/>
+    <rect class="patch" x="138" y="69" width="20" height="20" rx="3" opacity="0.3"/>
+    <!-- nests sit on good patches -->
+    <circle class="female" cx="79" cy="10" r="5"/>
+    <circle class="female" cx="148" cy="56" r="5"/>
+    <circle class="female" cx="33" cy="33" r="5"/>
+  </g>
+  <text class="muted s" x="34" y="240">Habitat quality varies by patch;</text>
+  <text class="muted s" x="34" y="256">daily food is drawn around it</text>
+  <text class="muted s" x="34" y="272">(negative binomial). Females</text>
+  <text class="muted s" x="34" y="288">nest on the best spots nearby.</text>
+
+  <line class="line" x1="232" y1="188" x2="252" y2="188" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ===== Card 2: decide ===== -->
+  <rect class="card" x="256" y="78" width="210" height="220" rx="10"/>
+  <circle class="ink" cx="278" cy="102" r="11"/><text class="num s" x="278" y="106" text-anchor="middle" font-weight="700">2</text>
+  <text class="ink h2" x="296" y="107">Split the budget</text>
+  <rect class="search" x="276" y="128" width="34"  height="30" rx="4"/>
+  <rect class="raise"  x="312" y="128" width="84"  height="30" rx="4"/>
+  <rect class="raise2" x="398" y="128" width="48"  height="30" rx="4"/>
+  <text class="num s" x="293" y="147" text-anchor="middle" font-weight="600">0.2</text>
+  <text class="num s" x="354" y="147" text-anchor="middle" font-weight="600">0.5</text>
+  <text class="num s" x="422" y="147" text-anchor="middle" font-weight="600">0.3</text>
+  <text class="muted s" x="293" y="174" text-anchor="middle">search</text>
+  <text class="muted s" x="354" y="174" text-anchor="middle">raise nest A</text>
+  <text class="muted s" x="422" y="174" text-anchor="middle">nest B</text>
+  <text class="ink t" x="361" y="204" text-anchor="middle" font-style="italic">search + Σ raising = 1</text>
+  <text class="muted s" x="270" y="240">Raising goes where the marginal</text>
+  <text class="muted s" x="270" y="256">return is highest, given beliefs</text>
+  <text class="muted s" x="270" y="272">about others' care. Search share</text>
+  <text class="muted s" x="270" y="288">is learned (step 4).</text>
+
+  <line class="line" x1="468" y1="188" x2="488" y2="188" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ===== Card 3: act ===== -->
+  <rect class="card" x="492" y="78" width="210" height="220" rx="10"/>
+  <circle class="ink" cx="514" cy="102" r="11"/><text class="num s" x="514" y="106" text-anchor="middle" font-weight="700">3</text>
+  <text class="ink h2" x="532" y="107">Act, shuffled</text>
+  <rect class="search" x="508" y="124" width="10" height="10" rx="2"/>
+  <text class="ink t" x="524" y="133">Search: learn who</text>
+  <text class="muted s" x="524" y="149">cares at a nest, p = 1 − e^(−λs/d)</text>
+  <rect class="raise" x="508" y="162" width="10" height="10" rx="2"/>
+  <text class="ink t" x="524" y="171">Raise: forage, deplete</text>
+  <text class="muted s" x="524" y="187">food → fledglings (S-curve)</text>
+  <!-- S-curve -->
+  <g transform="translate(524,198)">
+    <line class="line" x1="0" y1="54" x2="150" y2="54" stroke-width="1"/>
+    <line class="line" x1="0" y1="54" x2="0" y2="0" stroke-width="1"/>
+    <path class="curve" d="M2,52 C50,52 60,50 75,28 C90,6 100,4 148,3" fill="none" stroke-width="2.5"/>
+    <text class="muted s" x="150" y="68" text-anchor="end">food</text>
+    <text class="muted s" x="6" y="10">fledglings</text>
+  </g>
+  <text class="muted s" x="506" y="288">Paternity follows a male's care.</text>
+
+  <line class="line" x1="704" y1="188" x2="724" y2="188" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ===== Card 4: learn ===== -->
+  <rect class="card" x="728" y="78" width="210" height="220" rx="10"/>
+  <circle class="ink" cx="750" cy="102" r="11"/><text class="num s" x="750" y="106" text-anchor="middle" font-weight="700">4</text>
+  <text class="ink h2" x="768" y="107">Learn</text>
+  <g>
+    <line class="care" x1="833" y1="185" x2="790" y2="148" stroke-width="3.5"/>
+    <line class="care" x1="833" y1="185" x2="890" y2="150" stroke-width="1.5"/>
+    <line class="care" x1="833" y1="185" x2="880" y2="218" stroke-width="1"/>
+    <circle class="male" cx="790" cy="148" r="13"/>
+    <circle class="male" cx="890" cy="150" r="8"/>
+    <circle class="male" cx="880" cy="218" r="6"/>
+    <circle class="male" cx="833" cy="185" r="9" stroke="#ffffff" stroke-width="2"/>
+    <text class="muted s" x="772" y="128">doing well</text>
+  </g>
+  <text class="muted s" x="742" y="240">Copy the search share of</text>
+  <text class="muted s" x="742" y="256">better-off neighbours (a Beta</text>
+  <text class="muted s" x="742" y="272">update). Remember what each</text>
+  <text class="muted s" x="742" y="288">visited nest looked like.</text>
+
+  <!-- loop back -->
+  <path class="line" d="M833,300 V322 H361 V302" fill="none" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+  <text class="muted s" x="597" y="316" text-anchor="middle">next round</text>
+
+  <!-- ===== Bottom: reading mating systems ===== -->
+  <line class="line" x1="24" y1="350" x2="936" y2="350" stroke-width="1" opacity="0.5"/>
+  <text class="ink h2" x="24" y="378">Who cares for whom reads naturally as a mating system.</text>
+  <circle class="female" cx="806" cy="373" r="6"/><text class="muted s" x="816" y="377">female</text>
+  <circle class="male" cx="870" cy="373" r="6"/><text class="muted s" x="880" y="377">male</text>
+
+  <!-- monogamy -->
+  <g transform="translate(132,0)">
+    <line class="care" x1="-34" y1="435" x2="34" y2="435" stroke-width="2"/>
+    <circle class="male" cx="-34" cy="435" r="9"/>
+    <circle class="female" cx="34" cy="435" r="9"/>
+    <text class="ink t" x="0" y="492" text-anchor="middle" font-weight="600">monogamy</text>
+  </g>
+  <!-- polygyny -->
+  <g transform="translate(372,0)">
+    <line class="care" x1="-34" y1="435" x2="34" y2="410" stroke-width="2"/>
+    <line class="care" x1="-34" y1="435" x2="34" y2="460" stroke-width="2"/>
+    <circle class="male" cx="-34" cy="435" r="9"/>
+    <circle class="female" cx="34" cy="410" r="9"/>
+    <circle class="female" cx="34" cy="460" r="9"/>
+    <text class="ink t" x="0" y="492" text-anchor="middle" font-weight="600">polygyny</text>
+  </g>
+  <!-- polyandry -->
+  <g transform="translate(612,0)">
+    <line class="care" x1="-34" y1="410" x2="34" y2="435" stroke-width="2"/>
+    <line class="care" x1="-34" y1="460" x2="34" y2="435" stroke-width="2"/>
+    <circle class="male" cx="-34" cy="410" r="9"/>
+    <circle class="male" cx="-34" cy="460" r="9"/>
+    <circle class="female" cx="34" cy="435" r="9"/>
+    <text class="ink t" x="0" y="492" text-anchor="middle" font-weight="600">polyandry</text>
+  </g>
+  <!-- polygynandry -->
+  <g transform="translate(852,0)">
+    <line class="care" x1="-34" y1="410" x2="34" y2="410" stroke-width="2"/>
+    <line class="care" x1="-34" y1="460" x2="34" y2="410" stroke-width="2"/>
+    <line class="care" x1="-34" y1="460" x2="34" y2="460" stroke-width="2"/>
+    <line class="care" x1="-34" y1="410" x2="34" y2="460" stroke-width="2"/>
+    <circle class="male" cx="-34" cy="410" r="9"/>
+    <circle class="male" cx="-34" cy="460" r="9"/>
+    <circle class="female" cx="34" cy="410" r="9"/>
+    <circle class="female" cx="34" cy="460" r="9"/>
+    <text class="ink t" x="0" y="492" text-anchor="middle" font-weight="600">polygynandry</text>
+  </g>
+</svg>

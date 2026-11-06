@@ -1,41 +1,56 @@
-# config.py
-# Configuration constants for the simulation - THE SOURCE OF TRUTH
+"""All model parameters in one place.
 
-# Global parameters
-RANDOM_SEED = 42  # Random seed for reproducibility
+Every run is described by one immutable `Config`. Experiments create variants
+with `dataclasses.replace(DEFAULT, resource_level=0.8)` instead of editing
+module constants, so many configurations can run in the same process.
+"""
+from dataclasses import dataclass
 
-# World parameters (for world/world_generator.py)
-GRID_SIZE = 500  # grid size for the world, unchanged
-RESOURCE_LEVEL = 0.5  # resource level, between 0 and 1, higher means more resource
-AGGREGATION_LEVEL = 0.3  # aggregation level, between 0 and 1, higher means more aggregation
 
-# Agent parameters
-INITIAL_FEMALE_COUNT = 30  # initial number of female agents
-INITIAL_MALE_COUNT = 30  # initial number of male agents
+@dataclass(frozen=True)
+class Config:
+    # --- Run -------------------------------------------------------------
+    seed: int = 42
+    rounds: int = 60                  # breeding rounds per run
 
-# Search parameters (for core/base_agent.py)
-SEARCH_COST = 0.3  # search cost, between 0 and 1, higher means more cost
-MIN_SEARCH_SHARE = 0.05  # Minimum search share that agents can allocate
-MAX_SEARCH_RADIUS = 50.0  # Maximum search radius baseline value
+    # --- World (see docs/model.md §3) -------------------------------------
+    grid_size: int = 200              # world is grid_size x grid_size cells
+    resource_level: float = 0.5       # mean resource per cell (abundance)
+    aggregation_level: float = 0.3    # 0 = even habitat, ->1 = few rich patches
+    patch_size: int = 10              # side length of one habitat patch, in cells
 
-# Resource mining parameters
-RESOURCE_EXTRACTION_RATE = 0.3  # rho - extraction rate per mining action
-HOME_RANGE_RADIUS = 3  # Radius of home range for resource exploration
+    # --- Population --------------------------------------------------------
+    n_females: int = 30
+    n_males: int = 30
+    settle_radius: int = 10           # females place their nest on the best cell this close
 
-# Reproductive success parameters (logistic function) - for raising fledglings
-LOGISTIC_K = 10.0  # Maximum number of viable fledglings
-LOGISTIC_A = 1e-6  # Initial level of logistic function
-LOGISTIC_R = 0.1   # Conversion efficiency of resources
+    # --- Information and search (§4) --------------------------------------
+    search_efficiency: float = 1.0    # lambda: higher = cheaper information
+    neighbourhood_radius: float = 50.0  # nests a bird can reach; peers it learns from
+    min_search_share: float = 0.05
+    max_search_share: float = 0.95
 
-# Simulation parameters
-LOOP_ROUND = 10  # number of days to run the simulation
+    # --- Raising and resources (§7) ---------------------------------------
+    territory_radius: float = 6.0     # foraging radius of a nest with total effort 1
+    max_nest_effort: float = 4.0      # range stops growing beyond this total effort
+    extraction_rate: float = 0.5      # rho: fraction of a cell taken when foraged
+    travel_cost: float = 0.2          # share lost per visit to a nest one neighbourhood_radius away
 
-# Raising share allocation parameters (for greedy iterative allocation algorithm)
-MARGINAL_DELTA = 0.01  # Step size for numerical differentiation (marginal utility calculation)
-ALLOCATION_STEPS = 20  # Number of steps for greedy iterative allocation algorithm
+    # --- Fledgling curve ---------------------------------------------------
+    max_fledglings: float = 5.0       # K
+    fledgling_midpoint: float = 40.0  # R0: resources giving K/2 fledglings
+    fledgling_steepness: float = 0.1  # r
 
-# Belief system parameters
-SEARCH_BELIEF_PRIOR_ALPHA = 1.0
-SEARCH_BELIEF_PRIOR_BETA = 9.0
-SEARCH_BELIEF_INITIAL_MEAN = 0.1
-RAISING_BELIEF_INITIAL_MEAN = 0.45
+    # --- Decisions (§5) ----------------------------------------------------
+    allocation_steps: int = 20        # increments in the greedy raising allocation
+    marginal_delta: float = 0.01      # step for numerical marginal utility
+    adjustment_rate: float = 0.5      # fraction of the way to the best response per round
+    learning_memory: float = 10.0     # cap on Beta pseudo-counts (older evidence fades)
+    learning_noise: float = 0.05      # sd of noise when an individual adopts a search share
+    imitation_strength: float = 2.0   # how strongly better-off neighbours are favoured (0 = copy the average)
+
+    # --- Classification ----------------------------------------------------
+    care_threshold: float = 0.1       # raising share counted as "caring for" a nest
+
+
+DEFAULT = Config()

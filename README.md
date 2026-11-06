@@ -1,148 +1,74 @@
-# Breed Share
+# BreedShare
 
-Agent-based model simulating mating system dynamics via energy allocation strategies.
+**An agent-based model of how resource distribution shapes bird mating systems, built on one idea: every reproductive behaviour is a way of spending the same finite energy.**
 
-## Core Idea
+A female dunnock can stay with one male, share her nest with two, or end up with none. A male can stay with one female or split his care across several. BreedShare does not model each of these choices as its own rule. It treats them all as one decision: how to divide a fixed budget between **searching** (finding out what is going on at other nests) and **raising** (caring for specific nests).
 
-This model abstracts all reproductive behaviors as allocations of a finite energy budget between **search** (exploring for mates/territories) and **raising** (investing in nest care). By tracking how individuals optimize this trade-off under varying resource distributions, the model explores how spatiotemporal resource patterns drive the evolution of mating systems—from monogamy to polyandry and polygyny.
+$$
+\text{search\_share} + \sum_k \text{raising\_share}_k = 1
+$$
 
-## Quick Start
+The care links that birds choose read naturally as monogamy, polygyny, polyandry and polygynandry.
+
+![How one round of BreedShare works](docs/overview.svg)
+
+## What it shows
+
+![Mating system vs. resource abundance](docs/figures/resource_sweep.png)
+
+- **Resource abundance alone reorganises the mating system.** In poor habitats, males concentrate on the few females with good territories: most females get no male help, and the ones that do often have two (polyandry). In rich habitats, a nest needs little help to succeed, so males spread their care, and most females share their males with other females (polygynandry).
+- **This half-matches the dunnock data.** Polyandry is commonest where food is poor, as Davies & Lundberg (1984) found. But they found that fed females end up with *fewer* males, while the model gives them more. The model lacks a way for one male to keep others out, and the mismatch shows that this is needed. That is the next step ([ROADMAP](ROADMAP.md)).
+- **The cost of information barely matters, against the original hypothesis.** Varying search efficiency λ by a factor of 300 changes almost nothing, because a male learns what he needs from the nests he already cares for.
+
+Details, numbers and caveats: **[docs/results.md](docs/results.md)**. The reasoning behind each modelling choice: **[docs/model.md](docs/model.md)**.
+
+## What is in the model
+
+- **Patchy world.** Habitat quality varies by patch (gamma-distributed), and daily resources are drawn around it (Poisson), so each cell is negative binomial. Abundance and aggregation are separate parameters.
+- **Cheap and costly information.** Where nests are is free (birds hear song). Who is caring for them, and how much, is learned only by being there or by a successful search, and search is harder the farther away the nest is.
+- **Learning from neighbours.** Birds adjust how much they search by Bayesian updating on the search shares of better-off same-sex neighbours.
+- **Best response to beliefs.** Given what it believes others invest, each bird splits its raising energy across nests by equalising marginal returns, and moves half-way there each round (site fidelity).
+- **Travel and depletion.** Care loses energy on the way to distant nests. Foraging removes resources, so neighbouring ranges compete, and the shuffled order of actions matters.
+- **Fledglings as payoff.** Resources become fledglings through an S-shaped curve; males are credited in proportion to their care.
+
+## Quick start
+
+Requires Python 3.9+.
 
 ```bash
-# Clone the repository
 git clone https://github.com/lucas-shuo-han/BreedShare.git
-
-# Install dependencies
-pip install numpy
-# Dependencies: numpy
-
-# Configure simulation parameters in config/config.py
-# Then run the simulation
+cd BreedShare
+pip install -r requirements.txt
 python main.py
 ```
 
-## Configuration
+`main.py` prints the share of females in each mating system as the population settles. Try `python main.py --resource-level 0.2` or `--resource-level 1.5`, and `python main.py --help` for the other options.
 
-All simulation parameters are defined in `config/config.py`. Key parameter groups include:
-
-| Group | Key Parameters |
-|-------|----------------|
-| **World Generation** | `GRID_SIZE` (500), `RESOURCE_LEVEL` (100), `AGGREGATION_LEVEL` (5) |
-| **Agent Counts** | `initial_female_count` (20), `initial_male_count` (20) |
-| **Search Behavior** | `SEARCH_COST` (λ, search efficiency constant) |
-| **Fitness Calculation** | `LOGISTIC_K` (10), `LOGISTIC_R` (0.1), `LOGISTIC_A` (100) |
-| **Resource Extraction** | `RESOURCE_EXTRACTION_RATE` (ρ, extraction rate, 0.3) |
-| **Allocation Algorithm** | `ALLOCATION_STEPS` (20), `MARGINAL_DELTA` (0.01) |
-
-See the full documentation for detailed parameter descriptions and valid ranges.
-
-## Basic Usage
-
-Run a simulation with default parameters:
+To reproduce every figure (a few minutes on a laptop):
 
 ```bash
-python main.py
+python experiments/run_experiments.py
 ```
 
-The simulation will:
-1. Generate a 500×500 resource landscape using negative binomial distribution
-2. Initialize female and male agents with random positions
-3. Run the specified number of rounds (default: 5)
-4. Output per-round fitness data and nest state statistics
+To run the tests:
 
-## Output
-
-The simulation produces:
-
-- **Daily nest resources**: Resource accumulation per nest per round
-- **Agent fitness**: Individual payoff calculations for males and females
-- **Mating system statistics**: Nest composition, resource allocation patterns, fitness distributions
-- **Debug logs**: Strategy decisions and system states are logged to `breed_share_debug.log`
-
-### Debug Logging (Pluggable Component)
-
-The debug logging module is a pluggable code component located in `simulation/game_loop.py`. It records:
-- Agent strategy decisions (search_share and raising_shares)
-- System state changes
-- Runtime information for debugging and analysis
-
-**Features:**
-- Default log file: `breed_share_debug.log`
-- Log level: INFO and above
-- Format: timestamp - log level - message
-
-**Future Extensions:**
-- The log data can be used for visualization and analysis
-- Integrate with machine learning and genetic algorithm training
-- Generate statistical reports and visualizations by parsing log files
+```bash
+python -m pytest
+```
 
 ## Documentation
 
-For comprehensive details, consult the documentation in the `docs/` folder:
+| Document | What it covers |
+|---|---|
+| [docs/model.md](docs/model.md) | The model, and the reasoning behind each assumption |
+| [docs/results.md](docs/results.md) | Experiments, figures and what they mean |
+| [docs/architecture.md](docs/architecture.md) | How the code is organised |
+| [ROADMAP.md](ROADMAP.md) | Known limitations and next steps |
 
-- **`Requirements_Document.md`**: Full project requirements, modeling philosophy, functional specifications, and biological justifications
-- **`Technical_Document.md`**: Technical architecture, module details, implementation notes, algorithms, and mathematical formulations
+## Author
 
-## Project Structure
-
-```
-├── agents/
-│   ├── __init__.py
-│   ├── female_agent.py      # Female agent state
-│   ├── male_agent.py        # Male agent state
-│   └── nest.py              # Nest data class
-├── config/
-│   ├── __init__.py
-│   └── config.py            # All simulation parameters
-├── core/
-│   ├── __init__.py
-│   ├── base_agent.py        # Agent base class
-│   ├── base_strategy.py     # Strategy abstract base class
-│   └── fitness.py           # Fitness calculation functions
-├── docs/
-│   ├── Requirements_Document.md
-│   └── Technical_Document.md
-├── initializer/
-│   ├── __init__.py
-│   └── bootstrap.py         # System initialization
-├── simulation/
-│   ├── __init__.py
-│   ├── game_loop.py         # Main simulation loop
-│   └── orchestrator.py      # Agent-strategy binding
-├── strategies/
-│   ├── __init__.py
-│   ├── belief_system.py     # Bayesian belief updates
-│   ├── female_strategy.py   # Female decision logic
-│   └── male_strategy.py     # Male decision logic
-├── test/
-│   └── test_home_range.py
-├── world/
-│   ├── __init__.py
-│   ├── world_generator.py   # Resource map generation
-│   └── world_state.py       # Environment state management
-├── .gitignore
-├── README.md
-├── TODO.md
-└── main.py                  # Entry point
-```
+Lucas Shuo Han — model design and implementation.
 
 ## License
 
-This project is released under the MIT License. See LICENSE for details.
-
-## Citation
-
-If you use this model in your research, please cite:
-
-```
-Breed Share. (2024). Agent-based simulation of mating 
-system dynamics via energy allocation strategies. 
-GitHub: <repository-url>
-```
-
-Key references used in model development:
-- Birkhead (1981) - Territory establishment and social learning
-- Davies & Lundberg (1984) - Resource-driven territory dynamics
-- Davies (1986) - Parental investment and fitness functions
-- Bishton (1986) - Spatial distribution patterns
-
+MIT. See [LICENSE](LICENSE).

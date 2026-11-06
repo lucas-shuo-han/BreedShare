@@ -1,197 +1,110 @@
-# world/world_state.py
-from typing import Dict, Tuple, Any, Optional, List
+"""The world: resource grid, nests, birds, and the two physical processes
+that act on them — search (costly information) and foraging (depletion)."""
 import math
+from typing import Dict, List, Tuple
+
 import numpy as np
 from numpy.typing import NDArray
-import random
-from config.config import RESOURCE_LEVEL, AGGREGATION_LEVEL, SEARCH_COST, GRID_SIZE
+
 from agents.nest import Nest
+from config.config import Config
 from core.base_agent import BaseAgent
 from world.world_generator import WorldGenerator
 
-class WorldState:
-    """Environment state management center.
-    
-    Responsibilities:
-    1. Manage nest creation and ID allocation
-    2. Manage resource map state
-    3. Provide resource query interfaces
-    4. Record agent action results
-    5. Provide nest-related query interfaces
-    """
-    
-    def __init__(self, nests: Optional[Dict[int, Nest]] = None, agents: Optional[Dict[int, BaseAgent]] = None,
-                 resource_grid: Optional[NDArray[np.float32]] = None):
-        self._next_nest_id = 0
-        self.nests: Dict[int, Nest] = nests if nests is not None else {}
-        self.agents: Dict[int, BaseAgent] = agents if agents is not None else {}
-        
-        # spatial resource grid (supports spatial resource queries)
-        self.resource_grid: Optional[NDArray[np.float32]] = resource_grid
-        self.grid_size: int = resource_grid.shape[0] if resource_grid is not None else 0
-    
-    def create_nest_for_female(self, female_id: int, position: Tuple[int, int]) -> int:
-        """
-        Create nest for female (allows multiple nests per female).
-        
-        Args:
-            female_id: ID of the female agent that owns the nest
-            position: (x, y) grid coordinates where nest is located
-            
-        Returns:
-            Newly created nest ID
-        """
-        nest_id = self._next_nest_id
-        nest = Nest(
-            id=nest_id,
-            female_id=female_id,
-            position=position
-        )
-        self.nests[nest_id] = nest
-        self._next_nest_id += 1
-        return nest_id
-    
-    def get_nest_locations(self) -> List[Tuple[int, int]]:
-        """
-        Get all nest locations in the environment.
-        
-        Returns:
-            List of (x, y) coordinates for all nests
-        """
-        return [nest.position for nest in self.nests.values()]
-    
-    def get_resource_density(self, position: Tuple[int, int]) -> float:
-        """
-        Get resource density at a specific position.
-        
-        Args:
-            position: (x, y) grid coordinates to query
-            
-        Returns:
-            Resource density at the specified position
-        """
-        if self.resource_grid is None:
-            return 0.0
-        
-        x, y = position
-        if 0 <= x < self.grid_size and 0 <= y < self.grid_size:
-            return float(self.resource_grid[x, y])
-        return 0.0
-    
-    def compute_distance(self, cell1: Tuple[int, int], cell2: Tuple[int, int]) -> float:
-        """
-        Compute Euclidean distance between two cells.
-        """
-        dx = cell1[0] - cell2[0]
-        dy = cell1[1] - cell2[1]
-        return math.sqrt(dx * dx + dy * dy)
-    
-    def get_agents_in_radius(self, position: Tuple[int, int], radius: int) -> List[BaseAgent]:
-        """
-        Get all agents within a specified radius of a given position.
-        
-        Args:
-            position: (x, y) grid coordinates to query
-            radius: Maximum distance from position to include agents
-            
-        Returns:
-            List of BaseAgent objects within the specified radius
-        """
-        agents_in_radius = []
-        
-        for agent in self.agents.values():
-            distance = self.compute_distance(position, agent.position)
-            if distance <= radius:
-                agents_in_radius.append(agent)
-        
-        return agents_in_radius
-    
-    def get_all_nests_basic(self) -> Dict[int, Tuple[int, int]]:
-        """Return basic nest information (ID and position)."""
-        return {nest_id: nest.position for nest_id, nest in self.nests.items()}
-    
-    def get_nest_details(self, nest_id: int) -> Dict[str, Any]:
-        """
-        Return complete nest information.
-        """
-        nest = self.nests[nest_id]
-        return {
-            'nest_id': nest.id,
-            'female_id': nest.female_id,
-            'male_ids': nest.get_male_ids,  # Get the property value (no parentheses needed)
-            'position': nest.position
-        }
-    
-    def get_agent_by_id(self, agent_id: int) -> BaseAgent:
-        """Get agent object by ID."""
-        return self.agents[agent_id]
 
-    def query_nest_composition(self, agent_id: int, nest_id: int, search_share: float) -> Optional[Dict[str, Any]]:
-        """
-        Probabilistic query of nest internal composition based on distance and search share.
-        
-        Args:
-            agent_id: The ID of the agent performing the search
-            nest_id: The ID of the nest to query
-            search_share: The agent's search investment (0.0 to 1.0)
-            
-        Returns:
-            Dictionary containing nest details if search is successful, else None
-        """
-        # Get agent and nest objects
-        agent = self.agents[agent_id]
+class WorldState:
+    def __init__(self, config: Config, rng: np.random.Generator):
+        self.config = config
+        self.rng = rng
+        self.generator = WorldGenerator(config, rng)
+        self.habitat: NDArray[np.float64] = self.generator.generate_habitat()
+        self.resource_grid: NDArray[np.float64] = self.generator.generate_resources(self.habitat)
+        self.grid_size = config.grid_size
+
+        self.nests: Dict[int, Nest] = {}
+        self.agents: Dict[int, BaseAgent] = {}
+        self._next_nest_id = 0
+
+        # Per-nest foraging window: (row slice, col slice, distance array).
+        self._windows: Dict[int, Tuple[slice, slice, NDArray[np.float64]]] = {}
+        self._quality: Dict[int, float] = {}
+
+    # --- set-up --------------------------------------------------------------
+    def add_agent(self, agent: BaseAgent) -> None:
+        self.agents[agent.id] = agent
+
+    def create_nest(self, female_id: int, position: Tuple[int, int]) -> int:
+        nest_id = self._next_nest_id
+        self._next_nest_id += 1
+        self.nests[nest_id] = Nest(nest_id, female_id, position)
+        self._build_window(nest_id)
+        return nest_id
+
+    def _build_window(self, nest_id: int) -> None:
+        c = self.config
+        x, y = self.nests[nest_id].position
+        reach = c.territory_radius * math.sqrt(c.max_nest_effort)
+        r = int(math.ceil(reach))
+        rows = slice(max(0, x - r), min(self.grid_size, x + r + 1))
+        cols = slice(max(0, y - r), min(self.grid_size, y + r + 1))
+        xs = np.arange(rows.start, rows.stop)[:, None] - x
+        ys = np.arange(cols.start, cols.stop)[None, :] - y
+        dist = np.sqrt(xs ** 2 + ys ** 2)
+        self._windows[nest_id] = (rows, cols, dist)
+        # Habitat quality a bird can expect around this nest (mean resource per cell
+        # within the full foraging range). Habitat is persistent, so this is known.
+        self._quality[nest_id] = float(self.habitat[rows, cols][dist <= reach].mean())
+
+    # --- queries -------------------------------------------------------------
+    @staticmethod
+    def distance(a: Tuple[int, int], b: Tuple[int, int]) -> float:
+        return math.hypot(a[0] - b[0], a[1] - b[1])
+
+    def nests_within(self, position: Tuple[int, int], radius: float) -> List[int]:
+        return [k for k, n in self.nests.items() if self.distance(position, n.position) <= radius]
+
+    def agents_within(self, position: Tuple[int, int], radius: float, sex: str) -> List[BaseAgent]:
+        return [a for a in self.agents.values()
+                if a.sex == sex and self.distance(position, a.position) <= radius]
+
+    def nest_distance(self, agent: BaseAgent, nest_id: int) -> float:
+        return self.distance(agent.position, self.nests[nest_id].position)
+
+    def nest_quality(self, nest_id: int) -> float:
+        return self._quality[nest_id]
+
+    # --- search: costly information (§4) ---------------------------------------
+    def search_success_probability(self, distance: float, search_share: float) -> float:
+        """p = 1 - exp(-lambda * search_share / d), with d in units of the neighbourhood radius."""
+        if distance <= 0.0:
+            return 1.0
+        d = distance / self.config.neighbourhood_radius
+        return 1.0 - math.exp(-self.config.search_efficiency * search_share / d)
+
+    def search(self, agent: BaseAgent, nest_id: int) -> bool:
+        d = self.distance(agent.position, self.nests[nest_id].position)
+        return bool(self.rng.random() < self.search_success_probability(d, agent.search_share))
+
+    # --- foraging: depletion (§7) ------------------------------------------------
+    def forage(self, nest_id: int, share: float) -> float:
+        """Apply `share` more effort to a nest. The nest's foraging range grows from
+        radius T*sqrt(E) to T*sqrt(E + share); the bird takes a fraction rho of every
+        cell in the new ring. Taken resources leave the grid, so overlapping nests
+        compete and the order of actions matters."""
+        c = self.config
         nest = self.nests[nest_id]
-        
-        # Compute distance between agent and nest
-        d = self.compute_distance(agent.position, nest.position)
-        
-        # If agent is at the nest, it automatically knows the nest information
-        if d == 0.0:
-            return {
-                'nest_id': nest.id,
-                'female_id': nest.female_id,
-                'male_ids': nest.get_male_ids,  # Get the property value (no parentheses needed)
-                'position': nest.position,
-                'female_raising_share': nest.female_raising_share,
-                'male_raising_shares': nest.male_raising_shares
-            }
-        
-        # Core magic formula: discovery probability
-        p = 1 - math.exp(- SEARCH_COST * search_share / d)
-        
-        # Return results based on probability
-        if random.random() < p:
-            # Search successful, return all nest information
-            return {
-                'nest_id': nest.id,
-                'female_id': nest.female_id,
-                'male_ids': nest.get_male_ids,  # Get the property value (no parentheses needed)
-                'position': nest.position,
-                'female_raising_share': nest.female_raising_share,
-                'male_raising_shares': nest.male_raising_shares
-            }
-        else:
-            # Failed to find detailed nest information
-            return None
-    
-    def reset_resources(self) -> None:
-        """
-        Reset world resources using WorldGenerator.
-        
-        This method regenerates resources after each round according to the technical documentation.
-        """
-        if self.grid_size <= 0:
-            return
-        
-        # Use WorldGenerator to generate new resources with the same parameters as initialization
-        world_generator = WorldGenerator(GRID_SIZE, RESOURCE_LEVEL, AGGREGATION_LEVEL)
-        self.resource_grid = world_generator.generate_resources()
-    
-    def clear_all_nest_resources(self) -> None:
-        """
-        Clear all accumulated resources from nests.
-        
-        This method resets the resource counters for all nests.
-        """
-        for nest in self.nests.values():
-            nest.reset_resources()
+        e0 = min(nest.effort, c.max_nest_effort)
+        e1 = min(nest.effort + share, c.max_nest_effort)
+        if e1 <= e0:
+            return 0.0
+        r0 = c.territory_radius * math.sqrt(e0)
+        r1 = c.territory_radius * math.sqrt(e1)
+        rows, cols, dist = self._windows[nest_id]
+        ring = (dist < r1) & (dist >= r0)
+        block = self.resource_grid[rows, cols]
+        taken = block[ring] * c.extraction_rate
+        block[ring] -= taken
+        return float(taken.sum())
+
+    def regenerate_resources(self) -> None:
+        self.resource_grid = self.generator.generate_resources(self.habitat)

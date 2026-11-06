@@ -1,234 +1,77 @@
-# strategies/belief_system.py
-from typing import Dict, Any
-from collections import defaultdict
+"""What each bird believes (docs/model.md §5).
+
+* Search belief: a Beta distribution over the best search_share, updated by
+  fitness-weighted social learning from same-sex neighbours.
+* Nest beliefs: for each nest, how much everyone else (and every other male)
+  invests there. Learned only by observation — being at the nest, or a
+  successful search. Unobserved nests fall back to the population average.
+"""
+from typing import Dict, List, Tuple
+
 import numpy as np
-from config.config import (
-    SEARCH_BELIEF_PRIOR_ALPHA,
-    SEARCH_BELIEF_PRIOR_BETA,
-    SEARCH_BELIEF_INITIAL_MEAN,
-    RAISING_BELIEF_INITIAL_MEAN
-)
+
+from agents.nest import Nest
+from config.config import Config
 
 
 class BeliefSystem:
-    """
-    Belief system that implements Bayesian updating for agent decision-making.
-    
-    Two main functions:
-    1. Search-Share decision support: Updates beliefs about optimal search_share based on observed peers
-    2. Raising-Share behavior prediction: Predicts others' raising_share contributions to nests
-    
-    Both updates are stored and normalized independently within the system.
-    Simplified version: Only tracks mean values (no variance) for risk-neutral agents.
-    
-    IMPORTANT NOTICE:
-    This implementation is a simplified version based on descriptive statistics and naive Bayesian methods.
-    It has NOT undergone rigorous academic review or validation. The belief update logic is intentionally
-    simplified and may not fully capture complex cognitive processes, individual differences, or psychological
-    factors such as risk aversion and emotions. Users should be cautious when using this for research
-    purposes and consider it as a starting point for further development rather than a definitive solution.
-    """
-    
-    def __init__(self):
-        # Search share belief data
-        self.search_beliefs: Dict[int, Dict[str, Any]] = defaultdict(lambda: {
-            "observations": [],  # List of (search_share, fitness) tuples
-            "posterior_mean": SEARCH_BELIEF_INITIAL_MEAN,  # Initial posterior mean from config
-        })
-        
-        # Raising share belief data
-        self.raising_beliefs: Dict[int, Dict[int, Dict[str, Any]]] = defaultdict(lambda: defaultdict(lambda: {
-            "observations": [],  # List of (agent_id, raising_share) tuples
-            "expected_total_investment": RAISING_BELIEF_INITIAL_MEAN,  # Expected total investment from all others
-        }))
-    
-    def submit_search_observation(self, agent_id: int, observed_agent_id: int, 
-                                 search_share: float, fitness: float) -> None:
-        """
-        Submit an observation of a peer's search_share and fitness for social learning.
-        
-        Args:
-            agent_id: The observing agent's ID
-            observed_agent_id: The observed agent's ID
-            search_share: The observed agent's search_share
-            fitness: The observed agent's fitness
-        """
-        self.search_beliefs[agent_id]["observations"].append((search_share, fitness))
-    
-    def submit_raising_observation(self, agent_id: int, nest_id: int, 
-                                  observed_agent_id: int, raising_share: float, fitness: float) -> None:
-        """
-        Submit an observation of a peer's raising_share contribution to a nest.
-        
-        Args:
-            agent_id: The observing agent's ID
-            nest_id: The nest ID
-            observed_agent_id: The observed agent's ID
-            raising_share: The observed agent's raising_share for the nest
-            fitness: The observed agent's fitness (for fitness-weighted updates)
-        """
-        self.raising_beliefs[agent_id][nest_id]["observations"].append((observed_agent_id, raising_share, fitness))
-    
-    def update_search_beliefs(self, agent_id: int) -> None:
-        """
-        Perform Bayesian update on search_share beliefs based on collected observations.
-        Implements true Bayesian updating using fitness-weighted likelihood.
-        
-        Args:
-            agent_id: The agent whose beliefs to update
-        """
-        beliefs = self.search_beliefs[agent_id]
-        observations = beliefs["observations"]
-        
-        if not observations:
-            # No new observations, keep current beliefs
+    def __init__(self, config: Config, rng: np.random.Generator):
+        self.config = config
+        self.rng = rng
+        self._search: Dict[int, List[float]] = {}                       # agent -> [alpha, beta]
+        self._nests: Dict[int, Dict[int, Tuple[float, float]]] = {}     # agent -> nest -> (others_total, others_male)
+        # Population-level prior for nests never observed (free, coarse information).
+        self.prior_total: float = 1.0
+        self.prior_male: float = 0.5
+
+    # --- search share ------------------------------------------------------------
+    def init_agent(self, agent_id: int, search_share: float) -> None:
+        n = self.config.learning_memory / 2
+        self._search[agent_id] = [search_share * n, (1 - search_share) * n]
+        self._nests.setdefault(agent_id, {})
+
+    def search_mean(self, agent_id: int) -> float:
+        a, b = self._search[agent_id]
+        return a / (a + b)
+
+    def learn_search(self, agent_id: int, peers: List[Tuple[float, float]]) -> None:
+        """alpha += sum w_j s_j, beta += sum w_j (1 - s_j).
+        Weights favour neighbours doing better than average:
+            w_j proportional to exp(imitation_strength * z_j),
+        where z_j is j's fitness standardised within the neighbourhood.
+        Pseudo-counts are capped at `learning_memory`, so old evidence slowly fades."""
+        if not peers:
             return
-        
-        # Step 1: Extract search_shares and fitness values from observations
-        search_shares = np.array([obs[0] for obs in observations])
-        fitnesses = np.array([obs[1] for obs in observations])
-        
-        # Step 2: Calculate weights based on fitness (high fitness = higher weight)
-        total_fitness = np.sum(fitnesses)
-        if total_fitness > 0:
-            weights = fitnesses / total_fitness
-        else:
-            # If no fitness difference, use equal weights
-            weights = np.ones(len(fitnesses)) / len(fitnesses)
-        
-        # Step 3: Implement true Bayesian update using Beta-Binomial conjugate prior
-        # Convert posterior mean to alpha and beta parameters
-        prior_mean = beliefs["posterior_mean"]
-        prior_variance = 0.01  # Assume small variance for simplicity
-        prior_alpha = prior_mean * (prior_mean * (1 - prior_mean) / prior_variance - 1)
-        prior_beta = (1 - prior_mean) * (prior_mean * (1 - prior_mean) / prior_variance - 1)
-        
-        # Ensure alpha and beta are positive
-        prior_alpha = max(prior_alpha, SEARCH_BELIEF_PRIOR_ALPHA)
-        prior_beta = max(prior_beta, SEARCH_BELIEF_PRIOR_BETA)
-        
-        # Update using weighted observations
-        weighted_alpha_update = np.sum(weights * search_shares)
-        weighted_beta_update = np.sum(weights * (1 - search_shares))
-        
-        posterior_alpha = prior_alpha + weighted_alpha_update
-        posterior_beta = prior_beta + weighted_beta_update
-        
-        # Calculate new posterior mean
-        posterior_mean = posterior_alpha / (posterior_alpha + posterior_beta)
-        
-        # Step 4: Update beliefs
-        beliefs["posterior_mean"] = posterior_mean
-        
-        # Clear observations for next round
-        beliefs["observations"] = []
-    
-    def update_raising_beliefs(self, agent_id: int) -> None:
-        """
-        Perform Bayesian update on raising_share beliefs based on collected observations.
-        Implements proper Bayesian updating with fitness weights and calculates total expected investment.
-        
-        Args:
-            agent_id: The agent whose beliefs to update
-        """
-        agent_raising_beliefs = self.raising_beliefs[agent_id]
-        
-        for nest_id, beliefs in agent_raising_beliefs.items(): # type: ignore
-            observations = beliefs["observations"]
-            
-            if not observations:
-                continue
-            
-            # Step 1: Extract raising shares and fitness values
-            raising_shares = np.array([obs[1] for obs in observations])
-            fitnesses = np.array([obs[2] for obs in observations])
-            
-            # Step 2: Calculate weights based on fitness (high fitness = higher weight)
-            total_fitness = np.sum(fitnesses)
-            if total_fitness > 0:
-                weights = fitnesses / total_fitness
-            else:
-                # If no fitness difference, use equal weights
-                weights = np.ones(len(fitnesses)) / len(fitnesses)
-            
-            # Step 3: Calculate total observed investment weighted by fitness
-            weighted_observed_investment = np.sum(weights * raising_shares)
-            
-            # Step 4: Apply Bayesian update
-            # Use previous expected total as prior
-            prior_total = beliefs["expected_total_investment"]
-            
-            # Weight by number of observations (more observations = more weight on new data)
-            n_obs = len(observations)
-            expected_total_investment = (prior_total + n_obs * weighted_observed_investment) / (1 + n_obs)
-            
-            # Step 5: Update beliefs with expected total investment
-            beliefs["expected_total_investment"] = expected_total_investment
-            
-            # Clear observations for next round
-            beliefs["observations"] = []
-    
-    def get_search_belief(self, agent_id: int) -> float:
-        """
-        Get normalized belief for search_share (only mean for risk-neutral agents).
-        
-        Args:
-            agent_id: The agent whose beliefs to retrieve
-            
-        Returns:
-            Posterior mean as a float value
-        """
-        beliefs = self.search_beliefs[agent_id]
-        return beliefs["posterior_mean"]
-    
-    def get_raising_belief(self, agent_id: int, nest_id: int) -> float:
-        """
-        Get normalized belief for raising_share for a specific nest.
-        Returns the expected total investment from other individuals to nest k.
-        
-        Args:
-            agent_id: The agent whose beliefs to retrieve
-            nest_id: The nest ID
-            
-        Returns:
-            Expected total investment from other individuals as a float value
-        """
-        beliefs = self.raising_beliefs[agent_id][nest_id]
-        return beliefs["expected_total_investment"]
-    
-    def get_belief(self, agent_id: int, behavior_class: str, **kwargs: Any) -> float:
-        """
-        Unified interface to get normalized belief for agent behavior (only mean for risk-neutral agents).
-        
-        Args:
-            agent_id: The agent whose beliefs to retrieve
-            behavior_class: Type of behavior to get beliefs for ('search' or 'raising')
-            **kwargs: Additional parameters (nest_id for raising behavior)
-            
-        Returns:
-            Posterior mean as a float value
-            
-        Raises:
-            ValueError: If behavior_class is not 'search' or 'raising'
-        """
-        if behavior_class == 'search':
-            return self.get_search_belief(agent_id)
-        elif behavior_class == 'raising':
-            nest_id = kwargs.get('nest_id')
-            if nest_id is None:
-                raise ValueError("nest_id is required for raising behavior beliefs")
-            return self.get_raising_belief(agent_id, nest_id)
-        else:
-            raise ValueError(f"Invalid behavior_class: {behavior_class}. Must be 'search' or 'raising'")
-    
-    def update_all_beliefs(self) -> None:
-        """
-        Update beliefs for all agents. Called at the end of each round.
-        """
-        # Update search beliefs for all agents
-        for agent_id in self.search_beliefs:
-            self.update_search_beliefs(agent_id)
-        
-        # Update raising beliefs for all agents
-        for agent_id in self.raising_beliefs:
-            self.update_raising_beliefs(agent_id)
+        s = np.array([p[0] for p in peers])
+        f = np.array([p[1] for p in peers])
+        sd = f.std()
+        z = (f - f.mean()) / sd if sd > 1e-12 else np.zeros(len(f))
+        w = np.exp(self.config.imitation_strength * z)
+        w = w / w.sum()
+        belief = self._search[agent_id]
+        belief[0] += float(np.sum(w * s))
+        belief[1] += float(np.sum(w * (1 - s)))
+        total = belief[0] + belief[1]
+        if total > self.config.learning_memory:
+            scale = self.config.learning_memory / total
+            belief[0] *= scale
+            belief[1] *= scale
+
+    def sample_search_share(self, agent_id: int) -> float:
+        """The share actually used this round: the posterior mean plus a little noise."""
+        c = self.config
+        s = self.search_mean(agent_id) + self.rng.normal(0.0, c.learning_noise)
+        return float(np.clip(s, c.min_search_share, c.max_search_share))
+
+    # --- other birds' investment in a nest -------------------------------------------
+    def observe_nest(self, agent_id: int, nest: Nest) -> None:
+        mine = nest.shares.get(agent_id, 0.0)
+        others_total = nest.total_share - mine
+        others_male = nest.total_male_share - (mine if agent_id != nest.female_id else 0.0)
+        self._nests[agent_id][nest.id] = (others_total, others_male)
+
+    def nest_belief(self, agent_id: int, nest_id: int) -> Tuple[float, float]:
+        return self._nests[agent_id].get(nest_id, (self.prior_total, self.prior_male))
+
+    def knows(self, agent_id: int, nest_id: int) -> bool:
+        return nest_id in self._nests[agent_id]

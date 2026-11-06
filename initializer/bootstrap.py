@@ -1,178 +1,96 @@
-# initializer/bootstrap.py
-from typing import List, Tuple, Set, Literal
+"""Builds the initial world: landscape, birds, nests, beliefs."""
+from dataclasses import dataclass
+from typing import List, Tuple
+
 import numpy as np
-from numpy.typing import NDArray
-import random
-from world.world_generator import WorldGenerator
-from world.world_state import WorldState
-from core.base_agent import BaseAgent
+
 from agents.female_agent import FemaleAgent
 from agents.male_agent import MaleAgent
-from strategies.belief_system import BeliefSystem
+from config.config import Config
+from core.fitness import delivered_care
 from simulation.orchestrator import Orchestrator
-from config.config import GRID_SIZE, RESOURCE_LEVEL, AGGREGATION_LEVEL, INITIAL_FEMALE_COUNT, INITIAL_MALE_COUNT, HOME_RANGE_RADIUS
+from strategies.belief_system import BeliefSystem
+from world.world_state import WorldState
 
 
-def bootstrap() -> Tuple[WorldState, List[FemaleAgent], List[MaleAgent], Orchestrator]:
-    """
-    Initialize simulation world, agents, nests, and orchestrator.
-    
-    Returns:
-        Tuple containing: WorldState, List[FemaleAgent], List[MaleAgent], Orchestrator
-    """
-    # 1. Generate resource map and world state
-    world_generator = WorldGenerator(GRID_SIZE, RESOURCE_LEVEL, AGGREGATION_LEVEL)
-    resource_map: NDArray[np.float32] = world_generator.generate_resources()
-    world_state = WorldState(resource_grid = resource_map)
-    
-    # 2. Spawn agents with initial positions (uniform random)
-    female_agents = [agent for agent in _spawn_agents(INITIAL_FEMALE_COUNT, "female", world_state) if isinstance(agent, FemaleAgent)]
-    male_agents = [agent for agent in _spawn_agents(INITIAL_MALE_COUNT, "male", world_state) if isinstance(agent, MaleAgent)]
-    
-    # 3. Allocate nests for female agents only
-    _allocate_nests(female_agents, world_state, nest_radius=50, nests_per_agent=2)
-    
-    # 4. Initialize male nest assignments
-    _initialize_male_nest_assignments(male_agents, world_state, nests_per_male=2, min_search_share=0.05)
-    
-    # 5. Initialize belief system and orchestrator
-    belief_system = BeliefSystem()
-    orchestrator = Orchestrator(world_state, belief_system)
-    
-    # 6. Bind strategies to all agents
-    all_agents = female_agents + male_agents
-    orchestrator.bind_all(all_agents)
-    
-    return world_state, female_agents, male_agents, orchestrator
+@dataclass
+class Simulation:
+    config: Config
+    rng: np.random.Generator
+    world: WorldState
+    females: List[FemaleAgent]
+    males: List[MaleAgent]
+    beliefs: BeliefSystem
+    orchestrator: Orchestrator
 
 
-def _spawn_agents(count: int, agent_type: Literal["female", "male"], world_state: WorldState) -> List[BaseAgent]:
-    """
-    Spawn agents with uniform random initial positions.
-    
-    Args:
-        count: Number of agents to spawn
-        agent_type: Agent type, must be "female" or "male"
-        world_state: Current world state
-        
-    Returns:
-        List of spawned agents
-    """
-    agents: List[BaseAgent] = []
-    
-    # Get next available ID from existing agents in world state
-    next_agent_id = max(world_state.agents.keys()) + 1 if world_state.agents else 1
-    
-    for i in range(count): # type: ignore
-        # Generate uniform random position within grid bounds
-        x = random.randint(0, world_state.grid_size - 1)
-        y = random.randint(0, world_state.grid_size - 1)
-        position = (x, y)
-        
-        # Create agent based on type
-        agent_id = next_agent_id + i
-        if agent_type == "female":
-            agent = FemaleAgent(id=agent_id, position=position)
-        elif agent_type == "male":
-            agent = MaleAgent(id=agent_id, position=position)
+def bootstrap(config: Config) -> Simulation:
+    rng = np.random.default_rng(config.seed)
+    world = WorldState(config, rng)
+    beliefs = BeliefSystem(config, rng)
+
+    def random_cell() -> Tuple[int, int]:
+        return int(rng.integers(config.grid_size)), int(rng.integers(config.grid_size))
+
+    def initial_search() -> float:
+        return float(rng.uniform(config.min_search_share, 0.5))
+
+    agent_id = 0
+    females: List[FemaleAgent] = []
+    for _ in range(config.n_females):
+        female = FemaleAgent(agent_id, random_cell())
+        agent_id += 1
+        nest_id = world.create_nest(female.id, _settle(world, female.position, config.settle_radius))
+        female.nest_ids.append(nest_id)
+        female.move_to(world.nests[nest_id].position)
+        s = initial_search()
+        female.set_allocation(s, {nest_id: 1.0 - s})
+        world.add_agent(female)
+        females.append(female)
+
+    males: List[MaleAgent] = []
+    for _ in range(config.n_males):
+        male = MaleAgent(agent_id, random_cell())
+        agent_id += 1
+        reachable = sorted(world.nests_within(male.position, config.neighbourhood_radius),
+                           key=lambda k: world.distance(male.position, world.nests[k].position))[:2]
+        if reachable:
+            s = initial_search()
+            weights = rng.random(len(reachable))
+            weights = weights / weights.sum() * (1.0 - s)
+            male.set_allocation(s, dict(zip(reachable, weights.tolist())))
         else:
-            raise ValueError(f"Invalid agent type: {agent_type}")
-        
-        agents.append(agent)
-        world_state.agents[agent.id] = agent
-    
-    return agents
+            male.set_allocation(1.0, {})
+        world.add_agent(male)
+        males.append(male)
+
+    # The starting allocations act as "last round" for every nest.
+    for agent in world.agents.values():
+        for nest_id, share in agent.raising_shares.items():
+            care = delivered_care(share, world.nest_distance(agent, nest_id), config)
+            if care > 0:
+                world.nests[nest_id].shares[agent.id] = care
+
+    # Beliefs: each bird starts with its own search share as prior and knows
+    # the nests it is already caring for.
+    for agent in world.agents.values():
+        beliefs.init_agent(agent.id, agent.search_share)
+        for nest_id in agent.raising_shares:
+            beliefs.observe_nest(agent.id, world.nests[nest_id])
+
+    return Simulation(config, rng, world, females, males, beliefs, Orchestrator(beliefs))
 
 
-def _allocate_nests(agents: List[BaseAgent], world_state: WorldState, 
-                   nest_radius: int, nests_per_agent: int) -> None:
-    """
-    Allocate nests for each female agent in the best resource locations within fixed radius.
-    
-    Args:
-        agents: List of agents to allocate nests for
-        world_state: Current world state
-        nest_radius: Radius to search for nest locations
-        nests_per_agent: Number of nests to allocate per agent
-    """
-    for agent in agents:
-        # Get all cells within nest_radius from agent's position
-        x, y = agent.position
-        candidate_cells: List[Tuple[int, int]] = []
-        
-        # Generate all cells within nest_radius
-        for dx in range(-nest_radius, nest_radius + 1):
-            for dy in range(-nest_radius, nest_radius + 1):
-                if dx * dx + dy * dy <= nest_radius * nest_radius:
-                    cell_x = x + dx
-                    cell_y = y + dy
-                    if 0 <= cell_x < world_state.grid_size and 0 <= cell_y < world_state.grid_size:
-                        candidate_cells.append((cell_x, cell_y))
-        
-        # Sort cells by resource density in descending order
-        candidate_cells.sort(
-            key=lambda cell: world_state.get_resource_density(cell),
-            reverse=True
-        )
-        
-        # Select top nests_per_agent cells for nests
-        selected_cells = candidate_cells[:nests_per_agent]
-        
-        # Create nests for the agent
-        for cell in selected_cells:
-            # Calculate home range for this nest (10 grid units around nest)
-            home_range: Set[Tuple[int, int]] = set()
-            nest_x, nest_y = cell
-            for dx in range(-HOME_RANGE_RADIUS, HOME_RANGE_RADIUS + 1):
-                for dy in range(-HOME_RANGE_RADIUS, HOME_RANGE_RADIUS + 1):
-                    hr_x = nest_x + dx
-                    hr_y = nest_y + dy
-                    if 0 <= hr_x < world_state.grid_size and 0 <= hr_y < world_state.grid_size:
-                        home_range.add((hr_x, hr_y))
-            
-            # Create nest and associate with agent using WorldState's public method
-            nest_id = world_state.create_nest_for_female(agent.id, cell)
-            nest = world_state.nests[nest_id]
-            nest.home_range_cells = home_range
-            
-            # Add nest ID to agent's nest list
-            if isinstance(agent, FemaleAgent):
-                agent.nest_ids.add(nest.id)
-
-
-def _initialize_male_nest_assignments(male_agents: List[MaleAgent], 
-                                     world_state: WorldState, 
-                                     nests_per_male: int = 2, 
-                                     min_search_share: float = 0.05) -> None:
-    """
-    Initialize male nest assignments with random raising share distribution.
-    Each male gets nests_per_male nests with random raising share proportions summing to 1.
-    """
-    all_nests = list(world_state.nests.keys())
-    if not all_nests:
-        return
-
-    for i, male in enumerate(male_agents): # type: ignore
-        # Generate random search share between min and max
-        search_share = random.uniform(min_search_share, 0.95)
-        raising_share_available = 1.0 - search_share
-        
-        # Get random nests for this male
-        male_nests = random.sample(all_nests, nests_per_male)
-        
-        # Generate random proportions that sum to 1
-        weights = [random.random() for _ in range(nests_per_male)]
-        total_weight = sum(weights)
-        proportions = [w / total_weight for w in weights]
-        
-        # Assign nests and distribute raising shares proportionally
-        for j, nest_id in enumerate(male_nests):
-            male.assign_to_nest(nest_id, "alpha")
-            raising_share = raising_share_available * proportions[j]
-            
-            nest = world_state.nests[nest_id]
-            nest.male_raising_shares[male.id] = raising_share
-            nest.add_male(male.id)
-
-        
-    
+def _settle(world: WorldState, start: Tuple[int, int], radius: int) -> Tuple[int, int]:
+    """Females contract toward good habitat: the best free cell within `radius`."""
+    x0, y0 = start
+    taken = {n.position for n in world.nests.values()}
+    best, best_value = start, -1.0
+    for x in range(max(0, x0 - radius), min(world.grid_size, x0 + radius + 1)):
+        for y in range(max(0, y0 - radius), min(world.grid_size, y0 + radius + 1)):
+            if (x - x0) ** 2 + (y - y0) ** 2 > radius ** 2 or (x, y) in taken:
+                continue
+            value = world.habitat[x, y] + 1e-3 * world.resource_grid[x, y]
+            if value > best_value:
+                best, best_value = (x, y), value
+    return best

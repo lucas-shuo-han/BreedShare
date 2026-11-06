@@ -6,10 +6,8 @@ __pycache__/
 
 # Log files
 *.log
-mating_system_debug.log
 
 # Results and output directories
-results/
 output/
 
 # Python virtual environments
@@ -59,6 +57,12 @@ dist/
 *.xlsx
 *.xls
 *.pdf
+
+# Figures and results that belong to the repository
+!docs/*.png
+!docs/*.svg
+!docs/figures/*.png
+!results/*.csv
 
 # Compressed files
 *.zip
