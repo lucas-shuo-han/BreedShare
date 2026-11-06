@@ -24,9 +24,9 @@ Our model reframes mating system dynamics as a problem of **temporal and energet
 
 Every individual satisfies the budget constraint:
 
-$$
+```math
 \text{search\_share} + \sum_{k \in \text{nests}} \text{raising\_share}_k = 1
-$$
+```
 
 **search_share** is investment in exploring unknown mates and territories; **raising_share** is investment in consolidating current reproductive units. Abandonment corresponds to raising_shareₖ = 0, while defending and accepting mates are reflected in the relative proportion of raising_share between individuals, without being modelled separately.
 
@@ -90,9 +90,9 @@ The cognitive architecture of wild animals imposes severe constraints on informa
 
 **Costly information — who is in them.** Knowing a nest's internal state (its male and female roster and their investment) requires search. The probability of success decays with distance and grows with search investment:
 
-$$
+```math
 p_i = 1 - \exp\left(-\lambda \cdot \frac{\text{search\_share}}{d_i}\right)
-$$
+```
 
 λ is the search efficiency constant, standing for vegetation density and predation risk: low λ means costly search and a tendency to stay; high λ means cheap search and a tendency to explore. Distance $d_i$ is measured in units of the neighbourhood radius.
 
@@ -114,9 +114,9 @@ However, birds **do engage in social learning**—they observe neighbor strategi
 
 **As implemented.** The belief about the best search_share is a Beta distribution, with the bird's own starting share as the prior. Each round, a bird observes the (search_share, fitness) pairs of same-sex neighbours within the neighbourhood radius, itself included, and adds the weighted search shares to the Beta parameters:
 
-$$
+```math
 \alpha' = \alpha + \sum_j w_j s_j, \qquad \beta' = \beta + \sum_j w_j (1 - s_j), \qquad w_j \propto e^{\gamma z_j}
-$$
+```
 
 where $s_j$ is neighbour $j$'s search_share and $z_j$ its fitness standardised within the neighbourhood, so neighbours doing better than average count for more. $\gamma$ (`imitation_strength`, default 2) sets how strongly; 0 means copying the plain average. Next round's search_share is the posterior mean $\alpha'/(\alpha'+\beta')$ plus a little noise (sd 0.05), bounded to [0.05, 0.95]; the noise keeps variation for learning to act on.
 
@@ -126,9 +126,9 @@ Two choices refine the plain update. Weights use standardised fitness, because w
 
 Given search share $s$ and a belief $\hat{o}_k$ about how much everyone else invests in nest $k$, the individual solves
 
-$$
+```math
 \max_{\{r_k\}} \sum_{k} \mathcal{F}(r_k + \hat{o}_k, \mathbf{p}_k) \quad \text{s.t.} \quad \sum_k r_k = 1 - s,\; r_k \ge 0
-$$
+```
 
 **Design rationale.** We assume individuals can solve this problem through marginal utility equalisation. The biological justification is **natural selection programming**—the evolutionary process itself performs gradient descent in strategy space over millions of years, and retained decision rules approximate optimal response functions. Individuals need not differentiate in their brains; their behavioral patterns are already encoded as heuristics that are "approximately optimal given beliefs".
 
@@ -136,9 +136,9 @@ This assumption is admittedly Panglossian. It avoids compounding errors by overl
 
 **As implemented — greedy marginal allocation.** The budget $B = 1 - s$ is split into $N$ equal increments ($N$ = `ALLOCATION_STEPS`, default 20). Each increment goes to the nest with the highest numerical marginal utility
 
-$$
+```math
 \text{MU}_k(r_k) = \frac{\mathcal{F}(r_k + \hat{o}_k + \Delta) - \mathcal{F}(r_k + \hat{o}_k)}{\Delta}
-$$
+```
 
 Numerical differentiation avoids assuming the fitness function is differentiable. Because a nest's payoff can start flat (a travel overhead, or the low end of the S-curve), the marginal utility also looks ahead: it is the best average return over the next $j$ increments, for any $j$ up to the remaining budget. A plain one-step rule would never start investing in such a nest.
 
@@ -171,9 +171,9 @@ The key point is that **agents cannot know their position in the queue**. Rather
 
 **Step 0 — travel.** Care has to reach the nest. A bird's raising share $r_k$ for nest $k$ arrives as
 
-$$
+```math
 c_k = \max\left(0,\; r_k - \tau \cdot \frac{d_k}{D}\right)
-$$
+```
 
 where $d_k$ is the distance from home, $D$ the neighbourhood radius and $\tau$ the travel cost (0.2). Each extra nest therefore costs a fixed overhead, so spreading thinly over many nests wastes budget. Females live at their nest and pay nothing.
 
@@ -181,21 +181,21 @@ where $d_k$ is the distance from home, $D$ the neighbourhood radius and $\tau$ t
 
 **Step 2 — logistic conversion.** A nest's total resources $R_k$ map to expected surviving fledglings:
 
-$$
+```math
 \text{fledglings}_k = \frac{K}{1 + e^{-r (R_k - R_0)}}
-$$
+```
 
 $K$ (5) is the maximum number of fledglings, $r$ (0.1) the conversion efficiency, and $R_0$ (40) the resources that give half of $K$. In average habitat at the default resource level, a female alone (about three quarters of her budget) raises about 0.7 fledglings, and her nest needs roughly 0.6 more units of care from males to pass $K/2$. The S-shape encodes diminishing returns once resources saturate, very low output when investment is low, and a smooth curve for the optimiser (cf. Davies 1986).
 
 **Step 3 — payoff allocation.**
 
-$$
+```math
 \text{payoff}_{\text{female}} = \sum_{k \in \text{her nests}} \text{fledglings}_k
-$$
+```
 
-$$
+```math
 \text{payoff}_{\text{male}} = \sum_k \frac{c_{\text{male},k}}{\sum_{m \in \text{males of } k} c_{m,k}} \times \text{fledglings}_k
-$$
+```
 
 **Key simplifying assumption:** paternity among a nest's males is allocated in proportion to their delivered care. In dunnocks, males do adjust care to their mating access (Davies et al. 1992), but care and paternity are not identical; this assumption is the one most in need of defence. An egg-laying cost for females is part of the design but not yet in the code.
 

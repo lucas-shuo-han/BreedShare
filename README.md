@@ -4,9 +4,9 @@
 
 A female dunnock can stay with one male, share her nest with two, or end up with none. A male can stay with one female or split his care across several. BreedShare does not model each of these choices as its own rule. It treats them all as one decision: how to divide a fixed budget between **searching** (finding out what is going on at other nests) and **raising** (caring for specific nests).
 
-$$
+```math
 \text{search\_share} + \sum_k \text{raising\_share}_k = 1
-$$
+```
 
 The care links that birds choose read naturally as monogamy, polygyny, polyandry and polygynandry.
 
